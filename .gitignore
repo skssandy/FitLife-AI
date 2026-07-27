@@ -1,0 +1,93 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Build
+android/
+ios/
+*.apk
+*.aab
+*.ipa
+
+# EAS
+.eas/
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Supabase
+supabase/.temp/
+supabase/.env
+supabase/.env.local
+
+# Testing
+coverage/
+__snapshots__/
+.jest/
+
+# TypeScript
+*.tsbuildinfo
+
+# Linting
+.eslintcache
+.prettiercache
+
+# Debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+yarn.lock
+package-lock.json
+
+# OS Files
+.DS_Store
+*.pem
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Sensitive Files
+google-services.json
+google-services-dev.json
+GoogleService-Info.plist
+*.keystore
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+*.tgz
+.cache/
+temp/
+tmp/
