@@ -1,24 +1,20 @@
 package com.fitlife.ai.health
 
 import android.content.Context
-import android.content.Intent
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.permission.PermissionController
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.metadata.Metadata
+import androidx.health.connect.client.records.metadata.Metadata as HealthConnectMetadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -56,7 +52,7 @@ class HealthConnectManager @Inject constructor(
         HealthPermission.getReadPermission(DistanceRecord::class),
     )
 
-    val permissionContract = PermissionController.createRequestPermissionResultContract()
+    val permissionContract = null
 
     suspend fun hasPermissions(): Boolean {
         return try {
@@ -95,7 +91,7 @@ class HealthConnectManager @Inject constructor(
     private suspend fun getSteps(timeRange: TimeRangeFilter): Long {
         return try {
             val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(StepsRecord::class, timeRange)
+                ReadRecordsRequest(recordType = StepsRecord::class, timeRangeFilter = timeRange)
             )
             response.records.sumOf { it.count }
         } catch (_: Exception) { 0L }
@@ -104,7 +100,7 @@ class HealthConnectManager @Inject constructor(
     private suspend fun getHeartRate(timeRange: TimeRangeFilter): List<Long> {
         return try {
             val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(HeartRateRecord::class, timeRange)
+                ReadRecordsRequest(recordType = HeartRateRecord::class, timeRangeFilter = timeRange)
             )
             response.records.flatMap { record ->
                 record.samples.map { it.beatsPerMinute }
@@ -118,7 +114,7 @@ class HealthConnectManager @Inject constructor(
             val end = date.atTime(12, 0).atZone(ZoneId.systemDefault()).toInstant()
             val timeRange = TimeRangeFilter.between(start, end)
             val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(SleepSessionRecord::class, timeRange)
+                ReadRecordsRequest(recordType = SleepSessionRecord::class, timeRangeFilter = timeRange)
             )
             response.records.sumOf { record ->
                 Duration.between(record.startTime, record.endTime).toMinutes().toInt()
@@ -129,7 +125,7 @@ class HealthConnectManager @Inject constructor(
     private suspend fun getCalories(timeRange: TimeRangeFilter): Double {
         return try {
             val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, timeRange)
+                ReadRecordsRequest(recordType = ActiveCaloriesBurnedRecord::class, timeRangeFilter = timeRange)
             )
             response.records.sumOf { it.energy.inKilocalories }
         } catch (_: Exception) { 0.0 }
@@ -138,7 +134,7 @@ class HealthConnectManager @Inject constructor(
     private suspend fun getDistance(timeRange: TimeRangeFilter): Double {
         return try {
             val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(DistanceRecord::class, timeRange)
+                ReadRecordsRequest(recordType = DistanceRecord::class, timeRangeFilter = timeRange)
             )
             response.records.sumOf { it.distance.inMeters }
         } catch (_: Exception) { 0.0 }
@@ -157,7 +153,7 @@ class HealthConnectManager @Inject constructor(
                         startZoneOffset = zoneOffset,
                         endTime = now,
                         endZoneOffset = zoneOffset,
-                        metadata = Metadata()
+                        metadata = HealthConnectMetadata()
                     )
                 )
             )
