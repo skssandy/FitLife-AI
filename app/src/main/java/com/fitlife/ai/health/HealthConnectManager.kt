@@ -2,11 +2,16 @@ package com.fitlife.ai.health
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.*
+import androidx.health.connect.client.permission.PermissionController
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.HeartRateRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.SleepSessionRecord
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -16,13 +21,14 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
 data class HealthData(
     val steps: Long = 0,
-    val heartRateSamples: List<Double> = emptyList(),
-    val avgHeartRate: Double = 0.0,
+    val heartRateSamples: List<Long> = emptyList(),
+    val avgHeartRate: Long = 0,
     val sleepMinutes: Int = 0,
     val caloriesBurned: Double = 0.0,
     val distanceMeters: Double = 0.0
@@ -41,23 +47,16 @@ class HealthConnectManager @Inject constructor(
 
     val requiredPermissions = setOf(
         HealthPermission.getReadPermission(StepsRecord::class),
-        HealthPermission.getReadPermission(HeartRateRecord::class),
-        HealthPermission.getReadPermission(SleepSessionRecord::class),
-        HealthPermission.getReadPermission(CaloriesBurnedRecord::class),
-        HealthPermission.getReadPermission(DistanceRecord::class),
         HealthPermission.getWritePermission(StepsRecord::class),
+        HealthPermission.getReadPermission(HeartRateRecord::class),
         HealthPermission.getWritePermission(HeartRateRecord::class),
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
         HealthPermission.getWritePermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.getReadPermission(DistanceRecord::class),
     )
 
-    val permissionContract = object : ActivityResultContract<Set<String>, Set<String>>() {
-        override fun createIntent(context: Context, input: Set<String>): Intent {
-            return HealthConnectClient.createPermissionControllerIntent(context, input)
-        }
-        override fun parseResult(resultCode: Int, intent: Intent?): Set<String> {
-            return HealthConnectClient.parsePermissionsResult(resultCode, intent)
-        }
-    }
+    val permissionContract = PermissionController.createRequestPermissionResultContract()
 
     suspend fun hasPermissions(): Boolean {
         return try {
@@ -83,7 +82,7 @@ class HealthConnectManager @Inject constructor(
             HealthData(
                 steps = steps,
                 heartRateSamples = heartRate,
-                avgHeartRate = if (heartRate.isNotEmpty()) heartRate.average() else 0.0,
+                avgHeartRate = if (heartRate.isNotEmpty()) heartRate.average().toLong() else 0,
                 sleepMinutes = sleep,
                 caloriesBurned = calories,
                 distanceMeters = distance
@@ -102,13 +101,13 @@ class HealthConnectManager @Inject constructor(
         } catch (_: Exception) { 0L }
     }
 
-    private suspend fun getHeartRate(timeRange: TimeRangeFilter): List<Double> {
+    private suspend fun getHeartRate(timeRange: TimeRangeFilter): List<Long> {
         return try {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest(HeartRateRecord::class, timeRange)
             )
             response.records.flatMap { record ->
-                record.samples.map { it.beatsPerMinute.toDouble() }
+                record.samples.map { it.beatsPerMinute }
             }
         } catch (_: Exception) { emptyList() }
     }
@@ -130,7 +129,7 @@ class HealthConnectManager @Inject constructor(
     private suspend fun getCalories(timeRange: TimeRangeFilter): Double {
         return try {
             val response = healthConnectClient.readRecords(
-                ReadRecordsRequest(CaloriesBurnedRecord::class, timeRange)
+                ReadRecordsRequest(ActiveCaloriesBurnedRecord::class, timeRange)
             )
             response.records.sumOf { it.energy.inKilocalories }
         } catch (_: Exception) { 0.0 }
@@ -148,14 +147,17 @@ class HealthConnectManager @Inject constructor(
     suspend fun writeSteps(count: Long) {
         if (!isAvailable) return
         try {
+            val now = Instant.now()
+            val zoneOffset = ZoneId.systemDefault().rules.getOffset(now)
             healthConnectClient.insertRecords(
                 listOf(
                     StepsRecord(
-                        count = count,
-                        startTime = Instant.now().minusSeconds(60),
-                        startZoneId = ZoneId.systemDefault(),
-                        endTime = Instant.now(),
-                        endZoneId = ZoneId.systemDefault()
+                        count = count.coerceIn(1, 1000000),
+                        startTime = now.minusSeconds(60),
+                        startZoneOffset = zoneOffset,
+                        endTime = now,
+                        endZoneOffset = zoneOffset,
+                        metadata = Metadata()
                     )
                 )
             )

@@ -23,7 +23,7 @@ fun CycleTrackingScreen(onBack: () -> Unit) {
     val currentPhase = "Ovulation"
 
     val symptoms = listOf("Cramps", "Bloating", "Headache", "Fatigue", "Mood Swings", "Acne")
-    val selectedSymptoms = remember { mutableStateSetOf<String>() }
+    val selectedSymptoms = remember { mutableStateListOf<String>() }
 
     Scaffold(
         topBar = {
