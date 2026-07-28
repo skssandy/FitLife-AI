@@ -16,6 +16,7 @@
 
 # Ktor
 -keep class io.ktor.** { *; }
+-dontwarn io.ktor.**
 
 # Generative AI
 -keep class com.google.ai.client.generativeai.** { *; }
