@@ -7,10 +7,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
-val secretsProperties = java.util.Properties().apply {
+val geminiApiKey: String = run {
     val secretsFile = rootProject.file("secrets.properties")
     if (secretsFile.exists()) {
-        load(secretsFile.inputStream())
+        secretsFile.readLines()
+            .firstOrNull { it.startsWith("GEMINI_API_KEY=") }
+            ?.substringAfter("GEMINI_API_KEY=")
+            ?.trim()
+            ?: ""
+    } else {
+        ""
     }
 }
 
@@ -31,7 +37,7 @@ android {
         buildConfigField(
             "String",
             "GEMINI_API_KEY",
-            "\"${secretsProperties.getProperty("GEMINI_API_KEY", "")}\""
+            "\"$geminiApiKey\""
         )
     }
 
@@ -54,8 +60,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     buildFeatures {
