@@ -153,7 +153,7 @@ class HealthConnectManager @Inject constructor(
                         startZoneOffset = zoneOffset,
                         endTime = now,
                         endZoneOffset = zoneOffset,
-                        metadata = HealthConnectMetadata.manualRecording()
+                        metadata = HealthConnectMetadata.manualEntry()
                     )
                 )
             )
