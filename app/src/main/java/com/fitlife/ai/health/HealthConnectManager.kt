@@ -65,7 +65,7 @@ class HealthConnectManager @Inject constructor(
 
         val today = LocalDate.now()
         val startOfDay = today.atStartOfDay(ZoneId.systemDefault()).toInstant()
-        val endOfDay = today.atTime(LocalTime.MAX).toInstant()
+        val endOfDay = today.atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant()
         val timeRange = TimeRangeFilter.between(startOfDay, endOfDay)
 
         return try {
@@ -153,7 +153,7 @@ class HealthConnectManager @Inject constructor(
                         startZoneOffset = zoneOffset,
                         endTime = now,
                         endZoneOffset = zoneOffset,
-                        metadata = HealthConnectMetadata()
+                        metadata = HealthConnectMetadata.manualRecording()
                     )
                 )
             )
