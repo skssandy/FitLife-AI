@@ -22,7 +22,7 @@ val geminiApiKey: String = run {
 
 android {
     namespace = "com.fitlife.ai"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.fitlife.ai"
