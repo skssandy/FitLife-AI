@@ -13,15 +13,26 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitlife.ai.ui.screens.ai.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatScreen(onBack: () -> Unit) {
+fun ChatScreen(
+    onBack: () -> Unit,
+    viewModel: ChatViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
     var message by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<ChatMessage>() }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(uiState.messages.size) {
+        if (uiState.messages.isNotEmpty()) {
+            listState.animateScrollToItem(uiState.messages.lastIndex)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -54,7 +65,7 @@ fun ChatScreen(onBack: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                if (messages.isEmpty()) {
+                if (uiState.messages.isEmpty()) {
                     item {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 64.dp),
@@ -74,17 +85,9 @@ fun ChatScreen(onBack: () -> Unit) {
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Spacer(modifier = Modifier.height(24.dp))
-                            listOf(
-                                "Create a workout plan for me",
-                                "What should I eat today?",
-                                "How can I improve my sleep?"
-                            ).forEach { suggestion ->
+                            uiState.suggestions.forEach { suggestion ->
                                 SuggestionChip(
-                                    onClick = {
-                                        messages.add(ChatMessage(suggestion, isUser = true))
-                                        messages.add(ChatMessage("I'd be happy to help with that! Based on your profile and goals, here are my recommendations...", isUser = false))
-                                        scope.launch { listState.animateScrollToItem(messages.lastIndex) }
-                                    },
+                                    onClick = { viewModel.useSuggestion(suggestion) },
                                     label = { Text(suggestion) },
                                     modifier = Modifier.padding(4.dp)
                                 )
@@ -93,12 +96,36 @@ fun ChatScreen(onBack: () -> Unit) {
                     }
                 }
 
-                items(messages) { msg ->
-                    ChatBubble(message = msg)
+                items(uiState.messages) { msg ->
+                    ChatBubble(
+                        message = msg.text,
+                        isUser = msg.isUser
+                    )
+                }
+
+                if (uiState.isLoading) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Thinking...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
 
-            // Input bar
+            uiState.error?.let { error ->
+                Snackbar(
+                    modifier = Modifier.padding(16.dp),
+                    action = {
+                        TextButton(onClick = { viewModel.clearError() }) { Text("Dismiss") }
+                    }
+                ) { Text(error) }
+            }
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 tonalElevation = 3.dp
@@ -119,14 +146,11 @@ fun ChatScreen(onBack: () -> Unit) {
                     FilledIconButton(
                         onClick = {
                             if (message.isNotBlank()) {
-                                messages.add(ChatMessage(message, isUser = true))
-                                val userMsg = message
+                                viewModel.sendMessage(message)
                                 message = ""
-                                messages.add(ChatMessage("Great question about \"$userMsg\"! Based on current fitness science and your profile, I recommend focusing on progressive overload with adequate recovery. Would you like a specific plan?", isUser = false))
-                                scope.launch { listState.animateScrollToItem(messages.lastIndex) }
                             }
                         },
-                        enabled = message.isNotBlank()
+                        enabled = message.isNotBlank() && !uiState.isLoading
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
                     }
@@ -136,15 +160,13 @@ fun ChatScreen(onBack: () -> Unit) {
     }
 }
 
-data class ChatMessage(val text: String, val isUser: Boolean)
-
 @Composable
-fun ChatBubble(message: ChatMessage) {
+fun ChatBubble(message: String, isUser: Boolean) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
     ) {
-        if (!message.isUser) {
+        if (!isUser) {
             Icon(
                 Icons.Default.SmartToy,
                 contentDescription = null,
@@ -157,19 +179,19 @@ fun ChatBubble(message: ChatMessage) {
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
-                bottomStart = if (message.isUser) 16.dp else 4.dp,
-                bottomEnd = if (message.isUser) 4.dp else 16.dp
+                bottomStart = if (isUser) 16.dp else 4.dp,
+                bottomEnd = if (isUser) 4.dp else 16.dp
             ),
-            color = if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+            color = if (isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
         ) {
             Text(
-                text = message.text,
+                text = message,
                 modifier = Modifier.padding(12.dp),
-                color = if (message.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium
             )
         }
-        if (message.isUser) {
+        if (isUser) {
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 Icons.Default.Person,

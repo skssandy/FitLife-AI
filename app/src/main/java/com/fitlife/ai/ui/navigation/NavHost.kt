@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -13,6 +14,7 @@ import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 import com.fitlife.ai.ui.screens.auth.LoginScreen
 import com.fitlife.ai.ui.screens.auth.SignupScreen
+import com.fitlife.ai.ui.screens.auth.viewmodel.AuthViewModel
 import com.fitlife.ai.ui.screens.onboarding.OnboardingScreen
 import com.fitlife.ai.ui.screens.home.HomeScreen
 import com.fitlife.ai.ui.screens.workout.WorkoutScreen
@@ -51,13 +53,29 @@ object Routes {
 @Composable
 fun FitLifeNavHost() {
     val navController = rememberNavController()
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val authState by authViewModel.uiState.collectAsState()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    val startDestination = when {
+        !authState.isLoggedIn -> Routes.ONBOARDING
+        !authState.onboardingCompleted -> Routes.ONBOARDING
+        else -> Routes.HOME
+    }
 
     val bottomBarRoutes = listOf("home", "workouts", "nutrition", "progress", "profile")
     val showBottomBar = currentRoute?.let { route ->
         bottomBarRoutes.any { route.startsWith(it) }
     } ?: false
+
+    LaunchedEffect(authState.isLoggedIn, authState.onboardingCompleted) {
+        if (authState.isLoggedIn && authState.onboardingCompleted) {
+            navController.navigate(Routes.HOME) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -77,7 +95,7 @@ fun FitLifeNavHost() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Routes.ONBOARDING,
+            startDestination = startDestination,
             modifier = Modifier.padding(padding),
             enterTransition = { fadeIn(animationSpec = tween(200)) },
             exitTransition = { fadeOut(animationSpec = tween(200)) }
@@ -94,6 +112,7 @@ fun FitLifeNavHost() {
 
             composable(Routes.LOGIN) {
                 LoginScreen(
+                    authViewModel = authViewModel,
                     onSignupClick = { navController.navigate(Routes.SIGNUP) },
                     onLoginSuccess = {
                         navController.navigate(Routes.HOME) {
@@ -105,6 +124,7 @@ fun FitLifeNavHost() {
 
             composable(Routes.SIGNUP) {
                 SignupScreen(
+                    authViewModel = authViewModel,
                     onLoginClick = { navController.popBackStack() },
                     onSignupSuccess = {
                         navController.navigate(Routes.ONBOARDING_STEP, arguments = listOf(navArgument("step") { type = NavType.IntType; defaultValue = 1 })) {

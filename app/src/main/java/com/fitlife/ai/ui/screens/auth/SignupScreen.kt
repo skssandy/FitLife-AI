@@ -15,19 +15,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.fitlife.ai.ui.screens.auth.viewmodel.AuthViewModel
 
 @Composable
 fun SignupScreen(
+    authViewModel: AuthViewModel,
     onLoginClick: () -> Unit,
     onSignupSuccess: () -> Unit
 ) {
+    val uiState by authViewModel.uiState.collectAsState()
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(uiState.isLoggedIn) {
+        if (uiState.isLoggedIn) onSignupSuccess()
+    }
 
     Column(
         modifier = Modifier
@@ -44,11 +49,7 @@ fun SignupScreen(
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Create Account",
-            style = MaterialTheme.typography.displayMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        Text("Create Account", style = MaterialTheme.typography.displayMedium, color = MaterialTheme.colorScheme.onBackground)
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -121,24 +122,20 @@ fun SignupScreen(
             )
         }
 
-        if (error != null) {
+        if (uiState.error != null) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text(text = uiState.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = {
-                loading = true
-                error = null
-                onSignupSuccess()
-            },
+            onClick = { authViewModel.signup(email, password, fullName) },
             modifier = Modifier.fillMaxWidth().height(56.dp),
             shape = RoundedCornerShape(16.dp),
-            enabled = !loading && fullName.isNotBlank() && email.isNotBlank() && password.isNotBlank() && password == confirmPassword
+            enabled = !uiState.isLoading && fullName.isNotBlank() && email.isNotBlank() && password.isNotBlank() && password == confirmPassword
         ) {
-            if (loading) {
+            if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
             } else {
                 Text("Sign Up", style = MaterialTheme.typography.titleMedium)
@@ -146,9 +143,6 @@ fun SignupScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = onLoginClick) {
-            Text("Already have an account? Log in")
-        }
+        TextButton(onClick = onLoginClick) { Text("Already have an account? Log in") }
     }
 }

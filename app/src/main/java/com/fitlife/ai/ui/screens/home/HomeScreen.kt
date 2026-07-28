@@ -11,14 +11,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitlife.ai.health.HealthData
+import com.fitlife.ai.ui.screens.home.viewmodel.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onNavigateToChat: () -> Unit = {},
     onNavigateToWorkouts: () -> Unit = {},
-    onNavigateToNutrition: () -> Unit = {}
+    onNavigateToNutrition: () -> Unit = {},
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val health = uiState.healthData
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -28,7 +35,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Good Morning! 💪",
+            text = "${uiState.greeting}${if (uiState.userProfile?.fullName?.isNotEmpty() == true) ", ${uiState.userProfile!!.fullName.split(" ").first()}" else ""}!",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -40,7 +47,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Quick Stats Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -48,14 +54,14 @@ fun HomeScreen(
             QuickStatCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.LocalFireDepartment,
-                value = "320",
+                value = "${health.caloriesBurned.toInt()}",
                 label = "Calories",
                 color = MaterialTheme.colorScheme.primary
             )
             QuickStatCard(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.DirectionsWalk,
-                value = "6,543",
+                value = "${health.steps}",
                 label = "Steps",
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -70,14 +76,11 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // AI Coach Card
         Card(
             onClick = onNavigateToChat,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
             Row(
                 modifier = Modifier.padding(20.dp),
@@ -91,36 +94,22 @@ fun HomeScreen(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    Text("AI Coach", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Text(
-                        text = "AI Coach",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = "Ask me anything about fitness, nutrition, or your health goals",
+                        "Ask me anything about fitness, nutrition, or your health goals",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                 }
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            text = "Today's Workout",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
+        Text("Today's Workout", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Today's workout card
         Card(
             onClick = onNavigateToWorkouts,
             modifier = Modifier.fillMaxWidth(),
@@ -128,11 +117,7 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.FitnessCenter,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Icon(Icons.Default.FitnessCenter, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text("Upper Body Strength", style = MaterialTheme.typography.titleMedium)
@@ -154,7 +139,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Nutrition summary card
         Card(
             onClick = onNavigateToNutrition,
             modifier = Modifier.fillMaxWidth(),
@@ -162,11 +146,7 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Restaurant,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
+                    Icon(Icons.Default.Restaurant, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text("Nutrition Today", style = MaterialTheme.typography.titleMedium)
                 }
@@ -197,10 +177,7 @@ fun QuickStatCard(
     label: String,
     color: androidx.compose.ui.graphics.Color
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp)
-    ) {
+    Card(modifier = modifier, shape = RoundedCornerShape(16.dp)) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
