@@ -133,7 +133,6 @@ fun ActiveSessionScreen(
                     LinearProgressIndicator(
                         progress = { (currentExerciseIndex.toFloat() / exercises.size) },
                         modifier = Modifier.fillMaxWidth().height(8.dp),
-                        shape = RoundedCornerShape(4.dp),
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(

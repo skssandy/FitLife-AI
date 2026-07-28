@@ -1,10 +1,26 @@
 package com.fitlife.ai.ui.theme
 
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FitLifeTopBar(
     title: String,
@@ -19,7 +35,7 @@ fun FitLifeTopBar(
             if (onBackClick != null) {
                 IconButton(onClick = onBackClick) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back"
                     )
                 }
@@ -39,11 +55,11 @@ fun FitLifeBottomBar(
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
-        BottomNavItem("home", "Home", androidx.compose.material.icons.Icons.Default.Home),
-        BottomNavItem("workouts", "Workouts", androidx.compose.material.icons.Icons.Default.FitnessCenter),
-        BottomNavItem("nutrition", "Nutrition", androidx.compose.material.icons.Icons.Default.Restaurant),
-        BottomNavItem("progress", "Progress", androidx.compose.material.icons.Icons.Default.TrendingUp),
-        BottomNavItem("profile", "Profile", androidx.compose.material.icons.Icons.Default.Person),
+        BottomNavItem("home", "Home", Icons.Default.Home),
+        BottomNavItem("workouts", "Workouts", Icons.Default.FitnessCenter),
+        BottomNavItem("nutrition", "Nutrition", Icons.Default.Restaurant),
+        BottomNavItem("progress", "Progress", Icons.Default.TrendingUp),
+        BottomNavItem("profile", "Profile", Icons.Default.Person),
     )
 
     NavigationBar(modifier = modifier) {
@@ -61,5 +77,5 @@ fun FitLifeBottomBar(
 private data class BottomNavItem(
     val route: String,
     val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
+    val icon: ImageVector
 )

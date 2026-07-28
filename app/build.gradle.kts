@@ -113,7 +113,7 @@ dependencies {
     implementation("io.github.jan-tennert.supabase:auth-kt")
     implementation("io.github.jan-tennert.supabase:storage-kt")
 
-    implementation("androidx.health.connect:connect-client:1.1.0-alpha10")
+    implementation("androidx.health.connect:connect-client:1.0.0")
 
     implementation("androidx.camera:camera-core:1.4.1")
     implementation("androidx.camera:camera-camera2:1.4.1")

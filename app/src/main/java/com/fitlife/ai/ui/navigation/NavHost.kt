@@ -127,7 +127,7 @@ fun FitLifeNavHost() {
                     authViewModel = authViewModel,
                     onLoginClick = { navController.popBackStack() },
                     onSignupSuccess = {
-                        navController.navigate(Routes.ONBOARDING_STEP, arguments = listOf(navArgument("step") { type = NavType.IntType; defaultValue = 1 })) {
+                        navController.navigate("onboarding/1") {
                             popUpTo(Routes.LOGIN) { inclusive = true }
                         }
                     }
