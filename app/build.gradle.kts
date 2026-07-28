@@ -7,6 +7,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val secretsProperties = java.util.Properties().apply {
+    val secretsFile = rootProject.file("secrets.properties")
+    if (secretsFile.exists()) {
+        load(secretsFile.inputStream())
+    }
+}
+
 android {
     namespace = "com.fitlife.ai"
     compileSdk = 35
@@ -19,8 +26,13 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
         vectorDrawables { useSupportLibrary = true }
+
+        buildConfigField(
+            "String",
+            "GEMINI_API_KEY",
+            "\"${secretsProperties.getProperty("GEMINI_API_KEY", "")}\""
+        )
     }
 
     buildTypes {

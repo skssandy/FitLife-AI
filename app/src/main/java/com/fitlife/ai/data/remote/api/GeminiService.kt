@@ -1,5 +1,6 @@
 package com.fitlife.ai.data.remote.api
 
+import com.fitlife.ai.BuildConfig
 import com.fitlife.ai.domain.model.UserProfile
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -8,9 +9,8 @@ import javax.inject.Singleton
 class GeminiService @Inject constructor(
     private val geminiApi: GeminiApi
 ) {
-    companion object {
-        const val API_KEY = "AIzaSyDummyKeyReplaceWithRealKey"
-    }
+    private val apiKey: String
+        get() = BuildConfig.GEMINI_API_KEY
 
     private val systemPrompt = """
         You are FitLife AI, an expert personal fitness coach and nutrition advisor.
@@ -38,7 +38,7 @@ class GeminiService @Inject constructor(
     ): Result<String> {
         val contextPrompt = buildContextPrompt(userProfile)
         val fullSystemPrompt = "$systemPrompt\n\nUser Context:\n$contextPrompt"
-        return geminiApi.generateContent(API_KEY, fullSystemPrompt, messages)
+        return geminiApi.generateContent(apiKey, fullSystemPrompt, messages)
     }
 
     suspend fun getWorkoutRecommendation(
@@ -51,7 +51,7 @@ class GeminiService @Inject constructor(
             Task: Create a personalized workout recommendation for today focusing on $focus.
             Include specific exercises, sets, reps, and rest periods.
         """.trimIndent()
-        return geminiApi.generateContent(API_KEY, systemPrompt, listOf("user" to prompt))
+        return geminiApi.generateContent(apiKey, systemPrompt, listOf("user" to prompt))
     }
 
     suspend fun getNutritionAdvice(
@@ -64,7 +64,7 @@ class GeminiService @Inject constructor(
             
             Task: Provide nutrition advice based on what they've eaten and what they should eat for remaining meals.
         """.trimIndent()
-        return geminiApi.generateContent(API_KEY, systemPrompt, listOf("user" to prompt))
+        return geminiApi.generateContent(apiKey, systemPrompt, listOf("user" to prompt))
     }
 
     suspend fun analyzeBloodReport(
@@ -77,7 +77,7 @@ class GeminiService @Inject constructor(
             
             Task: Analyze this blood report. Identify abnormal values, health concerns, and lifestyle recommendations.
         """.trimIndent()
-        return geminiApi.generateContent(API_KEY, systemPrompt, listOf("user" to prompt))
+        return geminiApi.generateContent(apiKey, systemPrompt, listOf("user" to prompt))
     }
 
     suspend fun getCycleAdvice(
@@ -92,7 +92,7 @@ class GeminiService @Inject constructor(
             
             Task: Provide fitness and nutrition advice for this cycle phase.
         """.trimIndent()
-        return geminiApi.generateContent(API_KEY, systemPrompt, listOf("user" to prompt))
+        return geminiApi.generateContent(apiKey, systemPrompt, listOf("user" to prompt))
     }
 
     private fun buildContextPrompt(profile: UserProfile?): String {
