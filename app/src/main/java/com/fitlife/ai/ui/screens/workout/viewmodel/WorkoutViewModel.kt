@@ -2,7 +2,7 @@ package com.fitlife.ai.ui.screens.workout.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fitlife.ai.data.local.dao.WorkoutDao
+import com.fitlife.ai.data.local.dao.WorkoutProgramDao
 import com.fitlife.ai.data.local.dao.WorkoutSessionDao
 import com.fitlife.ai.data.local.entity.WorkoutProgramEntity
 import com.fitlife.ai.data.local.entity.WorkoutSessionEntity
@@ -24,7 +24,7 @@ data class WorkoutUiState(
 
 @HiltViewModel
 class WorkoutViewModel @Inject constructor(
-    private val workoutDao: WorkoutDao,
+    private val workoutDao: WorkoutProgramDao,
     private val sessionDao: WorkoutSessionDao,
     private val authRepository: AuthRepository,
     private val geminiService: GeminiService,

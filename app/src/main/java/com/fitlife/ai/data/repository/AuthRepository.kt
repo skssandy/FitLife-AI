@@ -67,7 +67,7 @@ class AuthRepository @Inject constructor(
                 }
             }
             val userId = supabase.auth.currentSessionOrNull()?.user?.id
-                ?: result.id?.toString()
+                ?: result.user?.id?.toString()
                 ?: ""
             if (userId.isNotEmpty()) {
                 createProfile(userId, email, fullName)

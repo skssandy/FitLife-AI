@@ -68,10 +68,10 @@ class GeminiApi @Inject constructor() {
     ): Result<String> {
         return try {
             val contents = mutableListOf<GeminiContent>()
-            contents.add(GeminiContent(role = "user", parts = listOf(systemPrompt)))
-            contents.add(GeminiContent(role = "model", parts = listOf("Understood. I'm FitLife AI, a fitness coach. I'll help with workouts, nutrition, and health.")))
+            contents.add(GeminiContent(role = "user", parts = listOf(GeminiPart(text = systemPrompt))))
+            contents.add(GeminiContent(role = "model", parts = listOf(GeminiPart(text = "Understood. I'm FitLife AI, a fitness coach. I'll help with workouts, nutrition, and health."))))
             for ((role, text) in messages) {
-                contents.add(GeminiContent(role = role, parts = listOf(text)))
+                contents.add(GeminiContent(role = role, parts = listOf(GeminiPart(text = text))))
             }
             val request = GeminiRequest(contents = contents)
             val response = client.post("$BASE_URL/models/$MODEL:generateContent?key=$apiKey") {
