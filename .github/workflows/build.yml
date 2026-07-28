@@ -31,9 +31,6 @@ jobs:
         run: |
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > secrets.properties
 
-      - name: Generate Gradle Wrapper
-        run: gradle wrapper --gradle-version=8.11.1
-
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
 
