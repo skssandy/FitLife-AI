@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Dumbbell handle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,50 L74,50 L74,58 L34,58 Z" />
+
+    <!-- Left weight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M26,42 L34,42 L34,66 L26,66 Z" />
+
+    <!-- Right weight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M74,42 L82,42 L82,66 L74,66 Z" />
+
+    <!-- Left cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M22,46 L26,46 L26,62 L22,62 Z" />
+
+    <!-- Right cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M82,46 L86,46 L86,62 L82,62 Z" />
+</vector>
