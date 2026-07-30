@@ -1,0 +1,122 @@
+package com.fitlife.ai.ui.navigation
+
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.fitlife.ai.ui.screens.ai.AIChatScreen
+import com.fitlife.ai.ui.screens.auth.LoginScreen
+import com.fitlife.ai.ui.screens.auth.SignupScreen
+import com.fitlife.ai.ui.screens.camera.CalorieTrackerScreen
+import com.fitlife.ai.ui.screens.home.HomeScreen
+import com.fitlife.ai.ui.screens.profile.ProfileScreen
+import com.fitlife.ai.ui.screens.settings.SettingsScreen
+import com.fitlife.ai.ui.screens.workout.WorkoutScreen
+import com.fitlife.ai.viewmodel.AuthViewModel
+
+data class BottomNavItem(
+    val label: String,
+    val icon: ImageVector,
+    val route: String
+)
+
+val bottomNavItems = listOf(
+    BottomNavItem("Home", Icons.Default.Home, Routes.Home.route),
+    BottomNavItem("Workout", Icons.Default.FitnessCenter, Routes.Workout.route),
+    BottomNavItem("AI Chat", Icons.Default.SmartToy, Routes.AIChat.route),
+    BottomNavItem("Calories", Icons.Default.DirectionsRun, Routes.CalorieTracker.route),
+    BottomNavItem("Profile", Icons.Default.Person, Routes.Profile.route),
+)
+
+val bottomNavRoutes = bottomNavItems.map { it.route }.toSet()
+
+@Composable
+fun AppNavHost() {
+    val navController = rememberNavController()
+    val authViewModel: AuthViewModel = hiltViewModel()
+    val isLoggedIn by authViewModel.isLoggedIn
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    val showBottomBar = currentDestination?.route in bottomNavRoutes
+
+    Scaffold(
+        bottomBar = {
+            if (showBottomBar) {
+                NavigationBar {
+                    bottomNavItems.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) }
+                        )
+                    }
+                }
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = if (isLoggedIn) Routes.Home.route else Routes.Login.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            composable(Routes.Login.route) {
+                LoginScreen(
+                    onNavigateToSignup = { navController.navigate(Routes.Signup.route) },
+                    onLoginSuccess = {
+                        navController.navigate(Routes.Home.route) {
+                            popUpTo(Routes.Login.route) { inclusive = true }
+                        }
+                    },
+                    viewModel = authViewModel
+                )
+            }
+            composable(Routes.Signup.route) {
+                SignupScreen(
+                    onNavigateToLogin = { navController.popBackStack() },
+                    onSignupSuccess = {
+                        navController.navigate(Routes.Home.route) {
+                            popUpTo(Routes.Login.route) { inclusive = true }
+                        }
+                    },
+                    viewModel = authViewModel
+                )
+            }
+            composable(Routes.Home.route) { HomeScreen() }
+            composable(Routes.Profile.route) { ProfileScreen() }
+            composable(Routes.Workout.route) { WorkoutScreen() }
+            composable(Routes.AIChat.route) { AIChatScreen() }
+            composable(Routes.CalorieTracker.route) { CalorieTrackerScreen() }
+            composable(Routes.Settings.route) { SettingsScreen() }
+        }
+    }
+}
