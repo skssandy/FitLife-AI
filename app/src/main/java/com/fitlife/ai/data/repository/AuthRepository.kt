@@ -3,8 +3,8 @@ package com.fitlife.ai.data.repository
 import com.fitlife.ai.data.local.dao.UserDao
 import com.fitlife.ai.data.local.entity.UserEntity
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
