@@ -48,6 +48,7 @@ class HomeViewModel @Inject constructor(
             try {
                 val userId = authRepository.getCurrentUserId()
                 val user = authRepository.loadUserFromSupabase()
+                    ?: authRepository.getUserOnce(userId)
 
                 val todayStart = startOfDay(0)
                 val todayEnd = todayStart + 86400000L

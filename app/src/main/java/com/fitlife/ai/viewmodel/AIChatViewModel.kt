@@ -69,7 +69,12 @@ class AIChatViewModel @Inject constructor(
 
     fun sendMessage(text: String) {
         viewModelScope.launch {
-            val userId = try { authRepository.getCurrentUserId() } catch (_: Exception) { return@launch }
+            val userId = try {
+                authRepository.getCurrentUserId()
+            } catch (_: Exception) {
+                _uiState.value = _uiState.value.copy(error = "Please sign in to use AI Coach")
+                return@launch
+            }
             val apiKey = BuildConfig.GEMINI_API_KEY
             if (apiKey.isBlank()) {
                 _uiState.value = _uiState.value.copy(error = "Gemini API key not configured")

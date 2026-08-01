@@ -21,6 +21,15 @@ class AuthRepository @Inject constructor(
 
     fun isLoggedIn() = currentUser != null
 
+    suspend fun restoreSession(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            supabase.auth.awaitInitialization()
+            supabase.auth.currentUserOrNull() != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     suspend fun signUp(email: String, password: String) = withContext(Dispatchers.IO) {
         supabase.auth.signUpWith(Email) {
             this.email = email
@@ -44,12 +53,19 @@ class AuthRepository @Inject constructor(
     }
 
     suspend fun getUserId(): String? =
-        supabase.auth.currentUserOrNull()?.id
+        runCatching { supabase.auth.currentUserOrNull()?.id }.getOrNull()
+            ?: userDao.getFirstUserId()
 
-    suspend fun getCurrentUserId(): String =
-        supabase.auth.currentUserOrNull()?.id ?: throw IllegalStateException("Not authenticated")
+    suspend fun getCurrentUserId(): String {
+        val fromAuth = runCatching { supabase.auth.currentUserOrNull()?.id }.getOrNull()
+        if (!fromAuth.isNullOrBlank()) return fromAuth
+        return userDao.getFirstUserId()
+            ?: throw IllegalStateException("Not authenticated")
+    }
 
     fun observeUser(userId: String): Flow<UserEntity?> = userDao.getUser(userId)
+
+    suspend fun getUserOnce(userId: String): UserEntity? = userDao.getUserOnce(userId)
 
     suspend fun loadUserFromSupabase(): UserEntity? = withContext(Dispatchers.IO) {
         val userId = getUserId() ?: return@withContext null
