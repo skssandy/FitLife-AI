@@ -149,7 +149,7 @@ fun AppNavHost() {
             composable(Routes.Workout.route) { WorkoutScreen() }
             composable(Routes.AIChat.route) { AIChatScreen() }
             composable(Routes.CalorieTracker.route) { CalorieTrackerScreen() }
-            composable(Routes.Settings.route) { SettingsScreen() }
+            composable(Routes.Settings.route) { SettingsScreen(viewModel = authViewModel) }
         }
     }
 }
