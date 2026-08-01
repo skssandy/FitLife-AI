@@ -29,6 +29,7 @@ import com.fitlife.ai.ui.screens.auth.LoginScreen
 import com.fitlife.ai.ui.screens.auth.SignupScreen
 import com.fitlife.ai.ui.screens.camera.CalorieTrackerScreen
 import com.fitlife.ai.ui.screens.home.HomeScreen
+import com.fitlife.ai.ui.screens.onboarding.OnboardingScreen
 import com.fitlife.ai.ui.screens.profile.ProfileScreen
 import com.fitlife.ai.ui.screens.settings.SettingsScreen
 import com.fitlife.ai.ui.screens.workout.WorkoutScreen
@@ -87,14 +88,14 @@ fun AppNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = if (isLoggedIn) Routes.Home.route else Routes.Login.route,
+            startDestination = if (isLoggedIn) Routes.Onboarding.route else Routes.Login.route,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.Login.route) {
                 LoginScreen(
                     onNavigateToSignup = { navController.navigate(Routes.Signup.route) },
                     onLoginSuccess = {
-                        navController.navigate(Routes.Home.route) {
+                        navController.navigate(Routes.Onboarding.route) {
                             popUpTo(Routes.Login.route) { inclusive = true }
                         }
                     },
@@ -105,11 +106,20 @@ fun AppNavHost() {
                 SignupScreen(
                     onNavigateToLogin = { navController.popBackStack() },
                     onSignupSuccess = {
-                        navController.navigate(Routes.Home.route) {
+                        navController.navigate(Routes.Onboarding.route) {
                             popUpTo(Routes.Login.route) { inclusive = true }
                         }
                     },
                     viewModel = authViewModel
+                )
+            }
+            composable(Routes.Onboarding.route) {
+                OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(Routes.Home.route) {
+                            popUpTo(Routes.Onboarding.route) { inclusive = true }
+                        }
+                    }
                 )
             }
             composable(Routes.Home.route) { HomeScreen() }

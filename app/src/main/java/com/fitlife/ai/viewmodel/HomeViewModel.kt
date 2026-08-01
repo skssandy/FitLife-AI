@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitlife.ai.data.local.entity.WorkoutEntity
 import com.fitlife.ai.data.repository.AuthRepository
+import com.fitlife.ai.data.repository.CalorieRepository
 import com.fitlife.ai.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
@@ -17,13 +19,16 @@ data class HomeUiState(
     val userName: String = "",
     val todayWorkouts: List<WorkoutEntity> = emptyList(),
     val totalWorkouts: Int = 0,
+    val totalCalories: Int = 0,
+    val caloriesGoal: Int = 500,
     val isLoading: Boolean = false
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val workoutRepository: WorkoutRepository
+    private val workoutRepository: WorkoutRepository,
+    private val calorieRepository: CalorieRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -43,14 +48,19 @@ class HomeViewModel @Inject constructor(
                 val todayStart = getTodayStart()
                 val todayEnd = todayStart + 86400000L
 
-                workoutRepository.getWorkoutsInRange(userId, todayStart, todayEnd).collect { workouts ->
-                    _uiState.value = _uiState.value.copy(
+                combine(
+                    workoutRepository.getWorkoutsInRange(userId, todayStart, todayEnd),
+                    calorieRepository.getEntriesInRange(userId, todayStart, todayEnd)
+                ) { workouts, entries ->
+                    HomeUiState(
                         userName = user?.displayName ?: user?.email ?: "User",
                         todayWorkouts = workouts,
                         totalWorkouts = workouts.size,
+                        totalCalories = entries.sumOf { it.calories },
+                        caloriesGoal = user?.fitnessGoal?.let { 700 } ?: 500,
                         isLoading = false
                     )
-                }
+                }.collect { _uiState.value = it }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false)
             }
