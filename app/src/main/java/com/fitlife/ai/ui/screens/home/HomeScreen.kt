@@ -122,6 +122,16 @@ fun HomeScreen(
         }
 
         item {
+            Text("This Week", style = MaterialTheme.typography.titleLarge)
+        }
+
+        item {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                WeeklyCalorieChart(data = uiState.weeklyData)
+            }
+        }
+
+        item {
             Text("Today's Workouts", style = MaterialTheme.typography.titleLarge)
         }
 
@@ -236,6 +246,42 @@ private fun StatCard(
             Spacer(Modifier.height(10.dp))
             Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun WeeklyCalorieChart(data: List<Pair<String, Int>>) {
+    val max = (data.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        data.forEach { (label, value) ->
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    if (value > 0) "$value" else "",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                val barHeight = if (value > 0) (value.toFloat() / max).coerceIn(0.08f, 1f) else 0.04f
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height((90 * barHeight).dp)
+                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

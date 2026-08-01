@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 data class HomeUiState(
@@ -21,6 +24,7 @@ data class HomeUiState(
     val totalWorkouts: Int = 0,
     val totalCalories: Int = 0,
     val caloriesGoal: Int = 500,
+    val weeklyData: List<Pair<String, Int>> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -45,19 +49,22 @@ class HomeViewModel @Inject constructor(
                 val userId = authRepository.getCurrentUserId()
                 val user = authRepository.loadUserFromSupabase()
 
-                val todayStart = getTodayStart()
+                val todayStart = startOfDay(0)
                 val todayEnd = todayStart + 86400000L
+                val weekStart = startOfDay(6)
 
                 combine(
                     workoutRepository.getWorkoutsInRange(userId, todayStart, todayEnd),
-                    calorieRepository.getEntriesInRange(userId, todayStart, todayEnd)
+                    calorieRepository.getEntriesInRange(userId, weekStart, todayEnd)
                 ) { workouts, entries ->
                     HomeUiState(
                         userName = user?.displayName ?: user?.email ?: "User",
                         todayWorkouts = workouts,
                         totalWorkouts = workouts.size,
-                        totalCalories = entries.sumOf { it.calories },
-                        caloriesGoal = user?.fitnessGoal?.let { 700 } ?: 500,
+                        totalCalories = entries.filter { it.date in todayStart until todayEnd }
+                            .sumOf { it.calories },
+                        caloriesGoal = 500,
+                        weeklyData = buildWeeklyData(entries, weekStart),
                         isLoading = false
                     )
                 }.collect { _uiState.value = it }
@@ -67,8 +74,20 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun getTodayStart(): Long {
+    private fun buildWeeklyData(entries: List<com.fitlife.ai.data.local.entity.CalorieEntryEntity>, weekStart: Long): List<Pair<String, Int>> {
+        val dayFormat = SimpleDateFormat("E", Locale.getDefault())
+        return (0..6).map { offset ->
+            val dayStart = weekStart + offset * 86400000L
+            val dayEnd = dayStart + 86400000L
+            val label = dayFormat.format(Date(dayStart))
+            val total = entries.filter { it.date in dayStart until dayEnd }.sumOf { it.calories }
+            label to total
+        }
+    }
+
+    private fun startOfDay(daysAgo: Int): Long {
         val cal = Calendar.getInstance()
+        cal.add(Calendar.DAY_OF_YEAR, -daysAgo)
         cal.set(Calendar.HOUR_OF_DAY, 0)
         cal.set(Calendar.MINUTE, 0)
         cal.set(Calendar.SECOND, 0)

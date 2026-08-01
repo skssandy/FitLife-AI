@@ -68,6 +68,18 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun sendPasswordReset(email: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            try {
+                authRepository.sendPasswordReset(email)
+                _uiState.value = _uiState.value.copy(isLoading = false, error = "Password reset link sent. Check your email.")
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Failed to send reset link")
+            }
+        }
+    }
+
     private fun loadUserProfile() {
         viewModelScope.launch {
             val user = authRepository.loadUserFromSupabase()

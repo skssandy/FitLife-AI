@@ -123,7 +123,7 @@ fun AppNavHost() {
                 )
             }
             composable(Routes.Home.route) { HomeScreen() }
-            composable(Routes.Profile.route) { ProfileScreen() }
+            composable(Routes.Profile.route) { ProfileScreen(onNavigateToSettings = { navController.navigate(Routes.Settings.route) }) }
             composable(Routes.Workout.route) { WorkoutScreen() }
             composable(Routes.AIChat.route) { AIChatScreen() }
             composable(Routes.CalorieTracker.route) { CalorieTrackerScreen() }

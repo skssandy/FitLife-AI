@@ -47,7 +47,7 @@ class AIChatViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "AIChatViewModel"
-        private const val GEMINI_MODEL = "gemini-2.0-flash-exp"
+        private const val GEMINI_MODEL = "gemini-3.5-flash"
     }
 
     init {

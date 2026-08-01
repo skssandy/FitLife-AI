@@ -1,7 +1,11 @@
 package com.fitlife.ai.ui.screens.camera
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
@@ -33,6 +37,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,8 +60,20 @@ fun CalorieTrackerScreen(
     viewModel: CalorieTrackerViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var showCamera by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) showCamera = true }
+
+    val hasCameraPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+        PackageManager.PERMISSION_GRANTED
+
+    LaunchedEffect(uiState.scannedFood) {
+        if (uiState.scannedFood != null) showAddDialog = true
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -71,7 +88,10 @@ fun CalorieTrackerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Calorie Tracker", style = MaterialTheme.typography.headlineMedium)
-                Button(onClick = { showCamera = true }) {
+                Button(onClick = {
+                    if (hasCameraPermission) showCamera = true
+                    else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                }) {
                     Icon(Icons.Default.CameraAlt, "Scan food", modifier = Modifier.size(20.dp))
                     Text(" Scan Food")
                 }
@@ -80,6 +100,16 @@ fun CalorieTrackerScreen(
 
         if (uiState.isLoading) {
             item { CircularProgressIndicator(modifier = Modifier.fillMaxWidth().padding(16.dp)) }
+        }
+
+        uiState.error?.let {
+            item {
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
         }
 
         uiState.recognizedText?.let {
@@ -128,15 +158,21 @@ fun CalorieTrackerScreen(
     if (showCamera) {
         CameraCaptureDialog(
             onDismiss = { showCamera = false },
-            onImageCaptured = { bitmap -> viewModel.recognizeText(bitmap); showCamera = false }
+            onImageCaptured = { bitmap ->
+                viewModel.analyzeFoodImage(bitmap)
+                showCamera = false
+            }
         )
     }
 
     if (showAddDialog) {
         AddCalorieDialog(
+            initialFoodName = uiState.scannedFood,
+            initialCalories = uiState.scannedCalories?.toString(),
             onDismiss = { showAddDialog = false },
             onAdd = { name, calories, mealType ->
                 viewModel.addEntry(name, calories, mealType)
+                viewModel.clearScan()
                 showAddDialog = false
             }
         )
@@ -196,16 +232,23 @@ private fun imageProxyToBitmap(image: ImageProxy): Bitmap {
 
 @Composable
 fun AddCalorieDialog(
+    initialFoodName: String? = null,
+    initialCalories: String? = null,
     onDismiss: () -> Unit,
     onAdd: (String, Int, String?) -> Unit
 ) {
-    var foodName by remember { mutableStateOf("") }
-    var calories by remember { mutableStateOf("") }
+    var foodName by remember { mutableStateOf(initialFoodName ?: "") }
+    var calories by remember { mutableStateOf(initialCalories ?: "") }
     var mealType by remember { mutableStateOf("") }
+
+    LaunchedEffect(initialFoodName, initialCalories) {
+        foodName = initialFoodName ?: ""
+        calories = initialCalories ?: ""
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Calorie Entry") },
+        title = { Text(if (initialFoodName != null) "Scan Result" else "Add Calorie Entry") },
         text = {
             Column {
                 OutlinedTextField(value = foodName, onValueChange = { foodName = it }, label = { Text("Food Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())

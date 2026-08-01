@@ -35,6 +35,10 @@ class AuthRepository @Inject constructor(
         }
     }
 
+    suspend fun sendPasswordReset(email: String) = withContext(Dispatchers.IO) {
+        supabase.auth.resetPasswordForEmail(email)
+    }
+
     suspend fun signOut() = withContext(Dispatchers.IO) {
         supabase.auth.signOut()
     }

@@ -20,6 +20,8 @@ import javax.inject.Inject
 data class CalorieTrackerUiState(
     val entries: List<CalorieEntryEntity> = emptyList(),
     val recognizedText: String? = null,
+    val scannedFood: String? = null,
+    val scannedCalories: Int? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -50,18 +52,49 @@ class CalorieTrackerViewModel @Inject constructor(
         }
     }
 
-    fun recognizeText(bitmap: Bitmap) {
+    fun analyzeFoodImage(bitmap: Bitmap) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, recognizedText = null, scannedFood = null, scannedCalories = null)
             try {
                 val image = InputImage.fromBitmap(bitmap, 0)
                 val result = recognizer.process(image).await()
                 val text = result.text
-                _uiState.value = _uiState.value.copy(recognizedText = text, isLoading = false)
+                val (foodName, calories) = parseNutrition(text)
+                _uiState.value = _uiState.value.copy(
+                    recognizedText = text,
+                    scannedFood = foodName,
+                    scannedCalories = calories,
+                    isLoading = false
+                )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
         }
+    }
+
+    fun clearScan() {
+        _uiState.value = _uiState.value.copy(recognizedText = null, scannedFood = null, scannedCalories = null)
+    }
+
+    private fun parseNutrition(text: String): Pair<String?, Int?> {
+        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val foodName = lines.firstOrNull()
+        var calories: Int? = null
+
+        val energyRegex = Regex("""(?i)energy[^0-9]*(\d+)[^0-9]*(kcal|cal\b|calories)""")
+        val calRegex = Regex("""(?i)(?:calories|calories per|cal\b)[^0-9]*(\d+)""")
+        val bareRegex = Regex("""(?i)(\d+)\s*(?:kcal|cal\b|calories)""")
+
+        for (line in lines) {
+            calories = energyRegex.find(line)?.groupValues?.get(1)?.toIntOrNull()
+            if (calories != null) break
+            calories = calRegex.find(line)?.groupValues?.get(1)?.toIntOrNull()
+            if (calories != null) break
+            calories = bareRegex.find(line)?.groupValues?.get(1)?.toIntOrNull()
+            if (calories != null) break
+        }
+
+        return foodName to calories
     }
 
     fun addEntry(foodName: String, calories: Int, mealType: String?) {
