@@ -4,7 +4,9 @@ import com.fitlife.ai.data.local.dao.CalorieEntryDao
 import com.fitlife.ai.data.local.entity.CalorieEntryEntity
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,15 +24,19 @@ class CalorieRepository @Inject constructor(
     suspend fun addEntry(entry: CalorieEntryEntity) {
         calorieEntryDao.insert(entry)
         try {
-            supabase.from("calorie_entries").insert(entry)
-            calorieEntryDao.markSynced(entry.id)
+            withContext(Dispatchers.IO) {
+                supabase.from("calorie_entries").insert(entry)
+                calorieEntryDao.markSynced(entry.id)
+            }
         } catch (_: Exception) { }
     }
 
     suspend fun deleteEntry(id: Long) {
         calorieEntryDao.delete(id)
         try {
-            supabase.from("calorie_entries").delete { filter { eq("id", id) } }
+            withContext(Dispatchers.IO) {
+                supabase.from("calorie_entries").delete { filter { eq("id", id) } }
+            }
         } catch (_: Exception) { }
     }
 
@@ -38,8 +44,10 @@ class CalorieRepository @Inject constructor(
         val unsynced = calorieEntryDao.getUnsyncedEntries()
         for (e in unsynced) {
             try {
-                supabase.from("calorie_entries").upsert(e)
-                calorieEntryDao.markSynced(e.id)
+                withContext(Dispatchers.IO) {
+                    supabase.from("calorie_entries").upsert(e)
+                    calorieEntryDao.markSynced(e.id)
+                }
             } catch (_: Exception) { }
         }
     }

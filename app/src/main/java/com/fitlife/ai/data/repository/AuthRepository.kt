@@ -6,7 +6,9 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.gotrue.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,21 +21,21 @@ class AuthRepository @Inject constructor(
 
     fun isLoggedIn() = currentUser != null
 
-    suspend fun signUp(email: String, password: String) {
+    suspend fun signUp(email: String, password: String) = withContext(Dispatchers.IO) {
         supabase.auth.signUpWith(Email) {
             this.email = email
             this.password = password
         }
     }
 
-    suspend fun signIn(email: String, password: String) {
+    suspend fun signIn(email: String, password: String) = withContext(Dispatchers.IO) {
         supabase.auth.signInWith(Email) {
             this.email = email
             this.password = password
         }
     }
 
-    suspend fun signOut() {
+    suspend fun signOut() = withContext(Dispatchers.IO) {
         supabase.auth.signOut()
     }
 
@@ -45,9 +47,9 @@ class AuthRepository @Inject constructor(
 
     fun observeUser(userId: String): Flow<UserEntity?> = userDao.getUser(userId)
 
-    suspend fun loadUserFromSupabase(): UserEntity? {
-        val userId = getUserId() ?: return null
-        return try {
+    suspend fun loadUserFromSupabase(): UserEntity? = withContext(Dispatchers.IO) {
+        val userId = getUserId() ?: return@withContext null
+        try {
             val profile = supabase.from("user_profiles")
                 .select { filter { eq("id", userId) } }
                 .decodeSingleOrNull<UserEntity>()
@@ -59,7 +61,9 @@ class AuthRepository @Inject constructor(
     suspend fun saveProfile(user: UserEntity) {
         userDao.upsert(user)
         try {
-            supabase.from("user_profiles").upsert(user)
+            withContext(Dispatchers.IO) {
+                supabase.from("user_profiles").upsert(user)
+            }
         } catch (_: Exception) { }
     }
 }

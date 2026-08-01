@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,7 +54,7 @@ val bottomNavRoutes = bottomNavItems.map { it.route }.toSet()
 fun AppNavHost() {
     val navController = rememberNavController()
     val authViewModel: AuthViewModel = hiltViewModel()
-    val isLoggedIn by authViewModel.isLoggedIn
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

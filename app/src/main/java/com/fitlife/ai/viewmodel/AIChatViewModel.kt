@@ -8,10 +8,12 @@ import com.fitlife.ai.data.local.entity.ChatMessageEntity
 import com.fitlife.ai.data.repository.AuthRepository
 import com.fitlife.ai.data.local.dao.ChatMessageDao
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -80,7 +82,7 @@ class AIChatViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                val response = callGeminiApi(apiKey, text)
+                val response = withContext(Dispatchers.IO) { callGeminiApi(apiKey, text) }
                 val aiMessage = ChatMessageEntity(userId = userId, role = "assistant", content = response)
                 chatMessageDao.insert(aiMessage)
                 _uiState.value = _uiState.value.copy(isLoading = false)
