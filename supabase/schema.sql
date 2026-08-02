@@ -77,3 +77,32 @@ create policy "workouts_own" on workouts
 drop policy if exists "calories_own" on calorie_entries;
 create policy "calories_own" on calorie_entries
   for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+-- Auto-create a profile row whenever a new auth user signs up.
+-- The function MUST live in public and the trigger must call it qualified
+-- (public.handle_new_user). The original unqualified trigger resolved the
+-- function in the auth schema, failed on every insert, and Gotrue returned
+-- 500 "Database error saving new user". Also note: the table column is
+-- "displayName", not "full_name".
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+as $function$
+begin
+    insert into public.user_profiles (id, email, "displayName")
+    values (
+        new.id,
+        coalesce(new.email, ''),
+        coalesce(new.raw_user_meta_data->>'full_name', '')
+    );
+    return new;
+exception when unique_violation then
+    return new;
+end;
+$function$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
