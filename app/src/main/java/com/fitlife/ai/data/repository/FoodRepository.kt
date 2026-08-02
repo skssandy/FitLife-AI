@@ -19,5 +19,7 @@ class FoodRepository @Inject constructor(
 
     fun search(query: String): Flow<List<FoodItemEntity>> = foodItemDao.search(query.trim())
 
+    suspend fun allOnce(): List<FoodItemEntity> = foodItemDao.getAllOnce()
+
     suspend fun findByBarcode(barcode: String): FoodItemEntity? = foodItemDao.findByBarcode(barcode)
 }

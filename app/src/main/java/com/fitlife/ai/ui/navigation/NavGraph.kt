@@ -36,6 +36,7 @@ import com.fitlife.ai.ui.screens.blood.BloodScreen
 import com.fitlife.ai.ui.screens.camera.CalorieTrackerScreen
 import com.fitlife.ai.ui.screens.cycle.CycleScreen
 import com.fitlife.ai.ui.screens.home.HomeScreen
+import com.fitlife.ai.ui.screens.nutrition.NutritionPlanScreen
 import com.fitlife.ai.ui.screens.onboarding.OnboardingScreen
 import com.fitlife.ai.ui.screens.profile.ProfileScreen
 import com.fitlife.ai.ui.screens.programs.ProgramsScreen
@@ -152,7 +153,8 @@ fun AppNavHost() {
                 HomeScreen(
                     onOpenBlood = { navController.navigate(Routes.Blood.route) },
                     onOpenCycle = { navController.navigate(Routes.Cycle.route) },
-                    onOpenWater = { navController.navigate(Routes.Water.route) }
+                    onOpenWater = { navController.navigate(Routes.Water.route) },
+                    onOpenNutritionPlan = { navController.navigate(Routes.NutritionPlan.route) }
                 )
             }
             composable(Routes.Profile.route) { ProfileScreen(onNavigateToSettings = { navController.navigate(Routes.Settings.route) }) }
@@ -162,6 +164,7 @@ fun AppNavHost() {
             composable(Routes.Programs.route) { ProgramsScreen() }
             composable(Routes.AIChat.route) { AIChatScreen() }
             composable(Routes.CalorieTracker.route) { CalorieTrackerScreen() }
+            composable(Routes.NutritionPlan.route) { NutritionPlanScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.Blood.route) { BloodScreen() }
             composable(Routes.Cycle.route) { CycleScreen() }
             composable(Routes.Water.route) { WaterScreen() }

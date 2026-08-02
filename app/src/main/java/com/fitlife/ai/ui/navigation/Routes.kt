@@ -10,6 +10,7 @@ sealed class Routes(val route: String) {
     data object Programs : Routes("programs")
     data object AIChat : Routes("ai_chat")
     data object CalorieTracker : Routes("calorie_tracker")
+    data object NutritionPlan : Routes("nutrition_plan")
     data object Blood : Routes("blood")
     data object Cycle : Routes("cycle")
     data object Water : Routes("water")

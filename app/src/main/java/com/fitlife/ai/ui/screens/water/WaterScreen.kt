@@ -1,5 +1,10 @@
 package com.fitlife.ai.ui.screens.water
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,25 +21,36 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitlife.ai.data.repository.ReminderSettings
 import com.fitlife.ai.viewmodel.WaterViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,6 +62,21 @@ fun WaterScreen(
     viewModel: WaterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { viewModel.setRemindersEnabled(true) }
+
+    val requestPermission: () -> Unit = {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setRemindersEnabled(true)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -182,8 +213,118 @@ fun WaterScreen(
                 }
             }
         }
+
+        item {
+            ReminderSettingsCard(
+                settings = uiState.reminders,
+                onEnabledChange = { on ->
+                    if (on) requestPermission() else viewModel.setRemindersEnabled(false)
+                },
+                onIntervalChange = viewModel::setReminderInterval,
+                onQuietHoursChange = viewModel::setQuietHours
+            )
+        }
     }
 }
 
 private fun formatTime(millis: Long): String =
     SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(millis))
+
+@Composable
+private fun ReminderSettingsCard(
+    settings: ReminderSettings,
+    onEnabledChange: (Boolean) -> Unit,
+    onIntervalChange: (Int) -> Unit,
+    onQuietHoursChange: (Int, Int) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.NotificationsActive, null, tint = MaterialTheme.colorScheme.primary)
+                    Column {
+                        Text("Hydration Reminders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Gentle nudges until you hit your water goal",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Switch(checked = settings.enabled, onCheckedChange = onEnabledChange)
+            }
+
+            if (settings.enabled) {
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Interval", style = MaterialTheme.typography.bodyMedium)
+                    HourDropdown(
+                        label = "${settings.intervalHours} h",
+                        options = listOf(1, 2, 3, 4),
+                        format = { "$it h" }
+                    ) { onIntervalChange(it) }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Quiet hours", style = MaterialTheme.typography.bodyMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HourDropdown(
+                            label = formatHour(settings.quietStartHour),
+                            options = (0..23).toList(),
+                            format = ::formatHour
+                        ) { start -> onQuietHoursChange(start, settings.quietEndHour) }
+                        Text("to", style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.CenterVertically))
+                        HourDropdown(
+                            label = formatHour(settings.quietEndHour),
+                            options = (0..23).toList(),
+                            format = ::formatHour
+                        ) { end -> onQuietHoursChange(settings.quietStartHour, end) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HourDropdown(
+    label: String,
+    options: List<Int>,
+    format: (Int) -> String,
+    onSelect: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { expanded = true }) { Text(label) }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(format(option)) },
+                    onClick = {
+                        expanded = false
+                        onSelect(option)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun formatHour(hour: Int): String = when {
+    hour == 0 -> "12 AM"
+    hour < 12 -> "$hour AM"
+    hour == 12 -> "12 PM"
+    else -> "${hour - 12} PM"
+}

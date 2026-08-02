@@ -1,13 +1,19 @@
 package com.fitlife.ai.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitlife.ai.data.repository.AuthRepository
+import com.fitlife.ai.data.repository.ReminderSettings
+import com.fitlife.ai.data.repository.ReminderSettingsRepository
 import com.fitlife.ai.data.repository.WaterRepository
+import com.fitlife.ai.worker.ReminderScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
@@ -17,6 +23,7 @@ data class WaterUiState(
     val logs: List<com.fitlife.ai.data.local.entity.WaterLogEntity> = emptyList(),
     val weeklyData: List<Pair<String, Int>> = emptyList(),
     val targetMl: Int = 2500,
+    val reminders: ReminderSettings = ReminderSettings(),
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -24,7 +31,9 @@ data class WaterUiState(
 @HiltViewModel
 class WaterViewModel @Inject constructor(
     private val waterRepository: WaterRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val settingsRepository: ReminderSettingsRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WaterUiState())
@@ -39,12 +48,19 @@ class WaterViewModel @Inject constructor(
             try {
                 val userId = authRepository.getCurrentUserId()
                 val user = authRepository.getUserOnce(userId)
-                val target = user?.weightKg?.let { (it * 35).toInt() } ?: 2500
+                val target = user?.hydrationTargetMl
+                    ?: user?.weightKg?.let { (it * 35).toInt() }
+                    ?: 2500
                 val todayStart = startOfDay()
                 val todayEnd = todayStart + 86400000L
                 val weekStart = startOfDay(6)
 
-                _uiState.value = _uiState.value.copy(targetMl = target)
+                val reminders = settingsRepository.settings.first()
+                if (reminders.enabled) {
+                    ReminderScheduler.schedule(context, reminders.intervalHours)
+                }
+
+                _uiState.value = _uiState.value.copy(targetMl = target, reminders = reminders)
 
                 waterRepository.getLogs(userId).collect { logs ->
                     val todayMl = logs.filter { it.date in todayStart until todayEnd }.sumOf { it.amountMl }
@@ -59,6 +75,37 @@ class WaterViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
             }
+        }
+    }
+
+    fun setRemindersEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setEnabled(enabled)
+            if (enabled) {
+                val interval = settingsRepository.settings.first().intervalHours
+                ReminderScheduler.schedule(context, interval)
+            } else {
+                ReminderScheduler.cancel(context)
+            }
+            _uiState.value = _uiState.value.copy(reminders = settingsRepository.settings.first())
+        }
+    }
+
+    fun setReminderInterval(intervalHours: Int) {
+        viewModelScope.launch {
+            settingsRepository.setIntervalHours(intervalHours)
+            val settings = settingsRepository.settings.first()
+            if (settings.enabled) {
+                ReminderScheduler.schedule(context, intervalHours)
+            }
+            _uiState.value = _uiState.value.copy(reminders = settings)
+        }
+    }
+
+    fun setQuietHours(start: Int, end: Int) {
+        viewModelScope.launch {
+            settingsRepository.setQuietHours(start, end)
+            _uiState.value = _uiState.value.copy(reminders = settingsRepository.settings.first())
         }
     }
 
