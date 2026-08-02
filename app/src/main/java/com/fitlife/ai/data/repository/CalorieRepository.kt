@@ -22,11 +22,12 @@ class CalorieRepository @Inject constructor(
         calorieEntryDao.getEntriesInRange(userId, start, end)
 
     suspend fun addEntry(entry: CalorieEntryEntity) {
-        calorieEntryDao.insert(entry)
+        val id = calorieEntryDao.insert(entry)
+        val toSync = entry.copy(id = id)
         try {
             withContext(Dispatchers.IO) {
-                supabase.from("calorie_entries").insert(entry)
-                calorieEntryDao.markSynced(entry.id)
+                supabase.from("calorie_entries").upsert(toSync)
+                calorieEntryDao.markSynced(id)
             }
         } catch (_: Exception) { }
     }

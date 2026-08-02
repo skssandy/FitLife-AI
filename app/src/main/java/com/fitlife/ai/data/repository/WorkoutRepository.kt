@@ -21,15 +21,15 @@ class WorkoutRepository @Inject constructor(
         workoutDao.getWorkoutsInRange(userId, start, end)
 
     suspend fun addWorkout(workout: WorkoutEntity) {
-        workoutDao.insert(workout)
+        val id = workoutDao.insert(workout)
+        val toSync = workout.copy(id = id)
         try {
             withContext(Dispatchers.IO) {
-                supabase.from("workouts").insert(workout)
-                workoutDao.markSynced(workout.id)
+                supabase.from("workouts").upsert(toSync)
+                workoutDao.markSynced(id)
             }
         } catch (_: Exception) { }
     }
-
     suspend fun deleteWorkout(id: Long) {
         workoutDao.delete(id)
         try {

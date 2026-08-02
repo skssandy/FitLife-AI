@@ -16,7 +16,7 @@ interface CalorieEntryDao {
     fun getEntriesInRange(userId: String, start: Long, end: Long): Flow<List<CalorieEntryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entry: CalorieEntryEntity)
+    suspend fun insert(entry: CalorieEntryEntity): Long
 
     @Query("UPDATE calorie_entries SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)

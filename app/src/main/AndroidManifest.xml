@@ -26,5 +26,18 @@
             </intent-filter>
         </activity>
 
+        <!-- WorkManager auto-init initializes with the default WorkerFactory before
+             Application.onCreate, which breaks Hilt's @HiltWorker injection. Remove it
+             so WorkManager is initialized lazily via Configuration.Provider
+             (FitLifeApp.workManagerConfiguration) with the HiltWorkerFactory. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                tools:node="remove" />
+        </provider>
+
     </application>
 </manifest>

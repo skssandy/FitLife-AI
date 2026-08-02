@@ -16,7 +16,7 @@ interface WorkoutDao {
     fun getWorkoutsInRange(userId: String, start: Long, end: Long): Flow<List<WorkoutEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(workout: WorkoutEntity)
+    suspend fun insert(workout: WorkoutEntity): Long
 
     @Query("UPDATE workouts SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)
