@@ -8,8 +8,11 @@ import com.fitlife.ai.data.local.AppDatabase
 import com.fitlife.ai.data.local.dao.BloodReportDao
 import com.fitlife.ai.data.local.dao.CalorieEntryDao
 import com.fitlife.ai.data.local.dao.ChatMessageDao
+import com.fitlife.ai.data.local.dao.FoodItemDao
 import com.fitlife.ai.data.local.dao.UserDao
+import com.fitlife.ai.data.local.dao.WaterLogDao
 import com.fitlife.ai.data.local.dao.WorkoutDao
+import com.fitlife.ai.data.local.dao.WorkoutProgramDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,11 +59,77 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS water_logs (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "userId TEXT NOT NULL, " +
+                    "amountMl INTEGER NOT NULL, " +
+                    "date INTEGER NOT NULL, " +
+                    "synced INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL)"
+            )
+            db.execSQL("ALTER TABLE users ADD COLUMN hydrationTargetMl INTEGER")
+        }
+    }
+
+    private val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS food_items (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "name TEXT NOT NULL, " +
+                    "category TEXT NOT NULL, " +
+                    "servingSize TEXT NOT NULL, " +
+                    "calories INTEGER NOT NULL, " +
+                    "proteinG REAL NOT NULL, " +
+                    "carbsG REAL NOT NULL, " +
+                    "fatG REAL NOT NULL, " +
+                    "barcode TEXT, " +
+                    "source TEXT NOT NULL)"
+            )
+        }
+    }
+
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE users ADD COLUMN calorieTarget INTEGER")
+            db.execSQL("ALTER TABLE users ADD COLUMN proteinTargetG INTEGER")
+            db.execSQL("ALTER TABLE users ADD COLUMN carbsTargetG INTEGER")
+            db.execSQL("ALTER TABLE users ADD COLUMN fatTargetG INTEGER")
+        }
+    }
+
+    private val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS workout_programs (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "userId TEXT NOT NULL, " +
+                    "name TEXT NOT NULL, " +
+                    "description TEXT NOT NULL, " +
+                    "goal TEXT NOT NULL, " +
+                    "daysJson TEXT NOT NULL, " +
+                    "synced INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL)"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "fitlife_db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(
+                MIGRATION_1_2,
+                MIGRATION_2_3,
+                MIGRATION_3_4,
+                MIGRATION_4_5,
+                MIGRATION_5_6,
+                MIGRATION_6_7,
+                MIGRATION_7_8
+            )
             .fallbackToDestructiveMigration()
             .build()
 
@@ -69,4 +138,7 @@ object DatabaseModule {
     @Provides fun provideCalorieEntryDao(db: AppDatabase): CalorieEntryDao = db.calorieEntryDao()
     @Provides fun provideChatMessageDao(db: AppDatabase): ChatMessageDao = db.chatMessageDao()
     @Provides fun provideBloodReportDao(db: AppDatabase): BloodReportDao = db.bloodReportDao()
+    @Provides fun provideWaterLogDao(db: AppDatabase): WaterLogDao = db.waterLogDao()
+    @Provides fun provideFoodItemDao(db: AppDatabase): FoodItemDao = db.foodItemDao()
+    @Provides fun provideWorkoutProgramDao(db: AppDatabase): WorkoutProgramDao = db.workoutProgramDao()
 }

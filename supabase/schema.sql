@@ -24,6 +24,11 @@ create table if not exists user_profiles (
   "stressLevel" text,
   "cycleLength" integer,
   "lastPeriodStart" bigint,
+  "hydrationTargetMl" integer,
+  "calorieTarget" integer,
+  "proteinTargetG" integer,
+  "carbsTargetG" integer,
+  "fatTargetG" integer,
   "updatedAt" bigint
 );
 
@@ -68,6 +73,15 @@ create table if not exists blood_reports (
   "createdAt" bigint
 );
 
+create table if not exists water_logs (
+  "id" bigint primary key,
+  "userId" uuid,
+  "amountMl" integer,
+  "date" bigint,
+  "synced" boolean default false,
+  "createdAt" bigint
+);
+
 -- PostgREST role privileges
 grant select on table user_profiles to anon;
 grant select, insert, update, delete on table user_profiles to authenticated;
@@ -85,11 +99,21 @@ grant select on table blood_reports to anon;
 grant select, insert, update, delete on table blood_reports to authenticated;
 grant select, insert, update, delete on table blood_reports to service_role;
 
+grant select on table water_logs to anon;
+grant select, insert, update, delete on table water_logs to authenticated;
+grant select, insert, update, delete on table water_logs to service_role;
+
 -- Row Level Security
 alter table user_profiles enable row level security;
 alter table workouts enable row level security;
 alter table calorie_entries enable row level security;
 alter table blood_reports enable row level security;
+
+drop policy if exists "water_own" on water_logs;
+create policy "water_own" on water_logs
+  for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+alter table water_logs enable row level security;
 
 drop policy if exists "profiles_own" on user_profiles;
 create policy "profiles_own" on user_profiles

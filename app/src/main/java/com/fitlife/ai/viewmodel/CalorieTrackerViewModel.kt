@@ -7,8 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitlife.ai.BuildConfig
 import com.fitlife.ai.data.local.entity.CalorieEntryEntity
+import com.fitlife.ai.data.local.entity.FoodItemEntity
 import com.fitlife.ai.data.repository.AuthRepository
 import com.fitlife.ai.data.repository.CalorieRepository
+import com.fitlife.ai.data.repository.FoodRepository
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -32,12 +36,17 @@ import javax.inject.Inject
 
 data class CalorieTrackerUiState(
     val entries: List<CalorieEntryEntity> = emptyList(),
+    val searchResults: List<FoodItemEntity> = emptyList(),
     val recognizedText: String? = null,
     val scannedFood: String? = null,
     val scannedCalories: Int? = null,
     val scannedProtein: Double? = null,
     val scannedCarbs: Double? = null,
     val scannedFat: Double? = null,
+    val calorieTarget: Int? = null,
+    val proteinTargetG: Int? = null,
+    val carbsTargetG: Int? = null,
+    val fatTargetG: Int? = null,
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -45,13 +54,15 @@ data class CalorieTrackerUiState(
 @HiltViewModel
 class CalorieTrackerViewModel @Inject constructor(
     private val calorieRepository: CalorieRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val foodRepository: FoodRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalorieTrackerUiState())
     val uiState: StateFlow<CalorieTrackerUiState> = _uiState.asStateFlow()
 
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+    private val barcodeScanner = BarcodeScanning.getClient()
 
     companion object {
         private const val TAG = "CalorieTrackerViewModel"
@@ -60,6 +71,7 @@ class CalorieTrackerViewModel @Inject constructor(
 
     init {
         loadEntries()
+        loadTargets()
     }
 
     private fun loadEntries() {
@@ -70,6 +82,133 @@ class CalorieTrackerViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(entries = entries)
                 }
             } catch (_: Exception) { }
+        }
+    }
+
+    fun loadTargets() {
+        viewModelScope.launch {
+            try {
+                val user = authRepository.getCurrentUserId()
+                    .let { authRepository.getUserOnce(it) }
+                if (user != null) {
+                    _uiState.value = _uiState.value.copy(
+                        calorieTarget = user.calorieTarget,
+                        proteinTargetG = user.proteinTargetG,
+                        carbsTargetG = user.carbsTargetG,
+                        fatTargetG = user.fatTargetG
+                    )
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
+    fun saveMacroTargets(
+        calorieTarget: Int?,
+        proteinTargetG: Int?,
+        carbsTargetG: Int?,
+        fatTargetG: Int?
+    ) {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUserId()
+                val current = authRepository.getUserOnce(userId)
+                val updated = (current ?: com.fitlife.ai.data.local.entity.UserEntity(
+                    id = userId,
+                    email = "",
+                    displayName = null,
+                    photoUrl = null,
+                    heightCm = null,
+                    weightKg = null,
+                    dateOfBirth = null,
+                    gender = null,
+                    fitnessGoal = null,
+                    activityLevel = null,
+                    workoutFrequency = null,
+                    equipment = null,
+                    injuries = null,
+                    lifestyle = null,
+                    sleepHours = null,
+                    stressLevel = null
+                )).copy(
+                    calorieTarget = calorieTarget,
+                    proteinTargetG = proteinTargetG,
+                    carbsTargetG = carbsTargetG,
+                    fatTargetG = fatTargetG
+                )
+                authRepository.saveProfile(updated)
+                _uiState.value = _uiState.value.copy(
+                    calorieTarget = calorieTarget,
+                    proteinTargetG = proteinTargetG,
+                    carbsTargetG = carbsTargetG,
+                    fatTargetG = fatTargetG
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun searchFoods(query: String) {
+        viewModelScope.launch {
+            if (query.isBlank()) {
+                _uiState.value = _uiState.value.copy(searchResults = emptyList())
+                return@launch
+            }
+            foodRepository.search(query).collect { results ->
+                _uiState.value = _uiState.value.copy(searchResults = results)
+            }
+        }
+    }
+
+    fun clearFoodSearch() {
+        _uiState.value = _uiState.value.copy(searchResults = emptyList())
+    }
+
+    fun scanBarcode(bitmap: Bitmap) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                recognizedText = null,
+                scannedFood = null,
+                scannedCalories = null,
+                scannedProtein = null,
+                scannedCarbs = null,
+                scannedFat = null
+            )
+            try {
+                val image = InputImage.fromBitmap(bitmap, 0)
+                val barcodes = barcodeScanner.process(image).await()
+                val value = barcodes.firstOrNull()?.rawValue
+                if (value.isNullOrBlank()) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "No barcode detected. Try again with better lighting."
+                    )
+                    return@launch
+                }
+                val food = foodRepository.findByBarcode(value)
+                if (food != null) {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        recognizedText = "Barcode $value · ${food.name}",
+                        scannedFood = food.name,
+                        scannedCalories = food.calories,
+                        scannedProtein = food.proteinG,
+                        scannedCarbs = food.carbsG,
+                        scannedFat = food.fatG
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        recognizedText = "Barcode $value",
+                        scannedFood = "Product $value",
+                        scannedCalories = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
+            }
         }
     }
 
@@ -326,5 +465,6 @@ class CalorieTrackerViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         recognizer.close()
+        barcodeScanner.close()
     }
 }

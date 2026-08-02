@@ -94,6 +94,7 @@ dependencies {
     implementation("androidx.camera:camera-view:1.3.4")
 
     implementation("com.google.mlkit:text-recognition:16.0.0")
+    implementation("com.google.mlkit:barcode-scanning:17.2.0")
 
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 

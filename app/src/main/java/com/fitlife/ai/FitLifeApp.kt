@@ -10,15 +10,25 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.fitlife.ai.worker.SyncWorker
+import com.fitlife.ai.data.repository.FoodRepository
 import dagger.hilt.android.HiltAndroidApp
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 @HiltAndroidApp
 class FitLifeApp : Application(), Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var foodRepository: FoodRepository
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -27,6 +37,9 @@ class FitLifeApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        applicationScope.launch {
+            foodRepository.seedIfEmpty()
+        }
         scheduleSync()
     }
 

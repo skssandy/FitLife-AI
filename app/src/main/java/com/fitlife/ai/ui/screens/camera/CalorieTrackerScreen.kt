@@ -33,7 +33,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +56,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.fitlife.ai.data.local.entity.CalorieEntryEntity
+import com.fitlife.ai.viewmodel.CalorieTrackerUiState
 import com.fitlife.ai.viewmodel.CalorieTrackerViewModel
 import java.nio.ByteBuffer
 
@@ -64,7 +67,9 @@ fun CalorieTrackerScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showCamera by remember { mutableStateOf(false) }
+    var cameraMode by remember { mutableStateOf("food") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showTargetsDialog by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<CalorieEntryEntity?>(null) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -91,12 +96,22 @@ fun CalorieTrackerScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Calorie Tracker", style = MaterialTheme.typography.headlineMedium)
-                Button(onClick = {
-                    if (hasCameraPermission) showCamera = true
-                    else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                }) {
-                    Icon(Icons.Default.CameraAlt, "Scan food", modifier = Modifier.size(20.dp))
-                    Text(" Scan Food")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        cameraMode = "food"
+                        if (hasCameraPermission) showCamera = true
+                        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }) {
+                        Icon(Icons.Default.CameraAlt, "Scan food", modifier = Modifier.size(20.dp))
+                        Text(" Scan Food")
+                    }
+                    OutlinedButton(onClick = {
+                        cameraMode = "barcode"
+                        if (hasCameraPermission) showCamera = true
+                        else cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                    }) {
+                        Text("Barcode")
+                    }
                 }
             }
         }
@@ -124,6 +139,10 @@ fun CalorieTrackerScreen(
                     }
                 }
             }
+        }
+
+        item {
+            MacroDashboardCard(uiState = uiState, onEditTargets = { showTargetsDialog = true })
         }
 
         item {
@@ -163,10 +182,31 @@ fun CalorieTrackerScreen(
 
     if (showCamera) {
         CameraCaptureDialog(
+            title = if (cameraMode == "barcode") "Scan Barcode" else "Scan Food Label",
             onDismiss = { showCamera = false },
             onImageCaptured = { bitmap ->
-                viewModel.analyzeFoodImage(bitmap)
+                if (cameraMode == "barcode") viewModel.scanBarcode(bitmap)
+                else viewModel.analyzeFoodImage(bitmap)
                 showCamera = false
+            }
+        )
+    }
+
+    if (showTargetsDialog) {
+        MacroTargetsDialog(
+            initialCalories = uiState.calorieTarget?.toString() ?: "",
+            initialProtein = uiState.proteinTargetG?.toString() ?: "",
+            initialCarbs = uiState.carbsTargetG?.toString() ?: "",
+            initialFat = uiState.fatTargetG?.toString() ?: "",
+            onDismiss = { showTargetsDialog = false },
+            onSave = { calories, protein, carbs, fat ->
+                viewModel.saveMacroTargets(
+                    calories.toIntOrNull(),
+                    protein.toIntOrNull(),
+                    carbs.toIntOrNull(),
+                    fat.toIntOrNull()
+                )
+                showTargetsDialog = false
             }
         )
     }
@@ -181,7 +221,9 @@ fun CalorieTrackerScreen(
             initialProtein = entry?.proteinG?.toString() ?: uiState.scannedProtein?.toString(),
             initialCarbs = entry?.carbsG?.toString() ?: uiState.scannedCarbs?.toString(),
             initialFat = entry?.fatG?.toString() ?: uiState.scannedFat?.toString(),
-            onDismiss = { showAddDialog = false; editing = null },
+            searchResults = uiState.searchResults,
+            onSearchChange = { viewModel.searchFoods(it) },
+            onDismiss = { showAddDialog = false; editing = null; viewModel.clearFoodSearch() },
             onAdd = { name, calories, mealType, protein, carbs, fat ->
                 if (entry != null) {
                     viewModel.updateEntry(entry.id, name, calories, mealType)
@@ -198,6 +240,7 @@ fun CalorieTrackerScreen(
 
 @Composable
 fun CameraCaptureDialog(
+    title: String = "Scan Food Label",
     onDismiss: () -> Unit,
     onImageCaptured: (Bitmap) -> Unit
 ) {
@@ -207,7 +250,7 @@ fun CameraCaptureDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Scan Food Label") },
+        title = { Text(title) },
         text = {
             AndroidView(
                 factory = { ctx ->
@@ -256,6 +299,8 @@ fun AddCalorieDialog(
     initialProtein: String? = null,
     initialCarbs: String? = null,
     initialFat: String? = null,
+    searchResults: List<com.fitlife.ai.data.local.entity.FoodItemEntity> = emptyList(),
+    onSearchChange: (String) -> Unit = {},
     onDismiss: () -> Unit,
     onAdd: (String, Int, String?, Double?, Double?, Double?) -> Unit
 ) {
@@ -265,6 +310,7 @@ fun AddCalorieDialog(
     var protein by remember { mutableStateOf(initialProtein ?: "") }
     var carbs by remember { mutableStateOf(initialCarbs ?: "") }
     var fat by remember { mutableStateOf(initialFat ?: "") }
+    var searchQuery by remember { mutableStateOf("") }
 
     LaunchedEffect(initialFoodName, initialCalories, initialMealType, initialProtein, initialCarbs, initialFat) {
         foodName = initialFoodName ?: ""
@@ -288,6 +334,46 @@ fun AddCalorieDialog(
         },
         text = {
             Column {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                        onSearchChange(it)
+                    },
+                    label = { Text("Search food database") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (searchResults.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.height(160.dp)) {
+                        items(searchResults) { food ->
+                            Card(
+                                onClick = {
+                                    foodName = food.name
+                                    calories = food.calories.toString()
+                                    protein = food.proteinG.toString()
+                                    carbs = food.carbsG.toString()
+                                    fat = food.fatG.toString()
+                                    mealType = if (mealType.isBlank()) "snack" else mealType
+                                    searchQuery = ""
+                                    onSearchChange("")
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                Column(Modifier.padding(8.dp)) {
+                                    Text(food.name, style = MaterialTheme.typography.titleSmall)
+                                    Text(
+                                        "${food.calories} cal · P ${food.proteinG}g · C ${food.carbsG}g · F ${food.fatG}g · ${food.servingSize}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
                 OutlinedTextField(value = foodName, onValueChange = { foodName = it }, label = { Text("Food Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(value = calories, onValueChange = { calories = it }, label = { Text("Calories") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -318,6 +404,102 @@ fun AddCalorieDialog(
                 },
                 enabled = foodName.isNotBlank() && calories.isNotBlank()
             ) { Text(if (editing) "Save" else "Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+private fun isToday(ts: Long): Boolean {
+    val cal = java.util.Calendar.getInstance()
+    val target = java.util.Calendar.getInstance()
+    target.timeInMillis = ts
+    return cal.get(java.util.Calendar.YEAR) == target.get(java.util.Calendar.YEAR) &&
+        cal.get(java.util.Calendar.DAY_OF_YEAR) == target.get(java.util.Calendar.DAY_OF_YEAR)
+}
+
+@Composable
+private fun MacroDashboardCard(
+    uiState: CalorieTrackerUiState,
+    onEditTargets: () -> Unit
+) {
+    val today = uiState.entries.filter { isToday(it.date) }
+    val cal = today.sumOf { it.calories }
+    val protein = today.sumOf { it.proteinG ?: 0.0 }
+    val carbs = today.sumOf { it.carbsG ?: 0.0 }
+    val fat = today.sumOf { it.fatG ?: 0.0 }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Today's Macros", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = onEditTargets) { Text("Targets") }
+            }
+            MacroBar(label = "Calories", consumed = cal.toDouble(), target = uiState.calorieTarget?.toDouble(), unit = "kcal")
+            MacroBar(label = "Protein", consumed = protein, target = uiState.proteinTargetG?.toDouble(), unit = "g")
+            MacroBar(label = "Carbs", consumed = carbs, target = uiState.carbsTargetG?.toDouble(), unit = "g")
+            MacroBar(label = "Fat", consumed = fat, target = uiState.fatTargetG?.toDouble(), unit = "g")
+        }
+    }
+}
+
+@Composable
+private fun MacroBar(label: String, consumed: Double, target: Double?, unit: String) {
+    val progress = if (target != null && target > 0) (consumed / target).toFloat() else 0f
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "${consumed.toInt()}/${
+                    target?.let { "${it.toInt()}" } ?: "∞"
+                } $unit",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        LinearProgressIndicator(
+            progress = { if (progress >= 1f) 1f else progress },
+            modifier = Modifier.fillMaxWidth(),
+            color = if (progress >= 1f) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    }
+}
+
+@Composable
+fun MacroTargetsDialog(
+    initialCalories: String,
+    initialProtein: String,
+    initialCarbs: String,
+    initialFat: String,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String, String) -> Unit
+) {
+    var calories by remember { mutableStateOf(initialCalories) }
+    var protein by remember { mutableStateOf(initialProtein) }
+    var carbs by remember { mutableStateOf(initialCarbs) }
+    var fat by remember { mutableStateOf(initialFat) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Macro Targets") },
+        text = {
+            Column {
+                OutlinedTextField(value = calories, onValueChange = { calories = it }, label = { Text("Daily Calories (kcal)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = protein, onValueChange = { protein = it }, label = { Text("Protein (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = carbs, onValueChange = { carbs = it }, label = { Text("Carbs (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = fat, onValueChange = { fat = it }, label = { Text("Fat (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(calories, protein, carbs, fat) }) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

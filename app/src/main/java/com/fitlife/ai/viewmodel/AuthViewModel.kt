@@ -6,6 +6,7 @@ import com.fitlife.ai.data.local.entity.UserEntity
 import com.fitlife.ai.data.repository.AuthRepository
 import com.fitlife.ai.data.repository.BloodReportRepository
 import com.fitlife.ai.data.repository.CalorieRepository
+import com.fitlife.ai.data.repository.WaterRepository
 import com.fitlife.ai.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,8 @@ class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val workoutRepository: WorkoutRepository,
     private val calorieRepository: CalorieRepository,
-    private val bloodReportRepository: BloodReportRepository
+    private val bloodReportRepository: BloodReportRepository,
+    private val waterRepository: WaterRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -109,6 +111,7 @@ class AuthViewModel @Inject constructor(
             workoutRepository.pullFromServer(userId)
             calorieRepository.pullFromServer(userId)
             bloodReportRepository.pullFromServer(userId)
+            waterRepository.pullFromServer(userId)
         }
     }
 
