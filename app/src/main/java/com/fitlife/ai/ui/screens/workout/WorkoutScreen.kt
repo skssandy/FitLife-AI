@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -34,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitlife.ai.data.local.entity.WorkoutEntity
 import com.fitlife.ai.viewmodel.WorkoutViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -45,10 +47,11 @@ fun WorkoutScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<WorkoutEntity?>(null) }
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
+            FloatingActionButton(onClick = { editing = null; showDialog = true }) {
                 Icon(Icons.Default.Add, "Add workout")
             }
         }
@@ -83,6 +86,9 @@ fun WorkoutScreen(
                                 }
                                 workout.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                             }
+                            IconButton(onClick = { editing = workout; showDialog = true }) {
+                                Icon(Icons.Default.Edit, "Edit")
+                            }
                             IconButton(onClick = { viewModel.deleteWorkout(workout.id) }) {
                                 Icon(Icons.Default.Delete, "Delete")
                             }
@@ -94,32 +100,50 @@ fun WorkoutScreen(
     }
 
     if (showDialog) {
-        AddWorkoutDialog(
-            onDismiss = { showDialog = false },
+        WorkoutDialog(
+            initial = editing,
+            onDismiss = { showDialog = false; editing = null },
             onAdd = { name, sets, reps, weight, duration, calories, notes ->
-                viewModel.addWorkout(name, sets, reps, weight, duration, calories, notes)
+                val existing = editing
+                if (existing != null) {
+                    viewModel.updateWorkout(
+                        existing.copy(
+                            exerciseName = name,
+                            sets = sets,
+                            reps = reps,
+                            weightKg = weight,
+                            durationMinutes = duration,
+                            caloriesBurned = calories,
+                            notes = notes
+                        )
+                    )
+                } else {
+                    viewModel.addWorkout(name, sets, reps, weight, duration, calories, notes)
+                }
                 showDialog = false
+                editing = null
             }
         )
     }
 }
 
 @Composable
-fun AddWorkoutDialog(
+fun WorkoutDialog(
+    initial: WorkoutEntity?,
     onDismiss: () -> Unit,
     onAdd: (String, Int, Int, Double?, Int?, Int?, String?) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var sets by remember { mutableStateOf("") }
-    var reps by remember { mutableStateOf("") }
-    var weight by remember { mutableStateOf("") }
-    var duration by remember { mutableStateOf("") }
-    var calories by remember { mutableStateOf("") }
-    var notes by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initial?.exerciseName ?: "") }
+    var sets by remember { mutableStateOf(initial?.sets?.toString() ?: "") }
+    var reps by remember { mutableStateOf(initial?.reps?.toString() ?: "") }
+    var weight by remember { mutableStateOf(initial?.weightKg?.toString() ?: "") }
+    var duration by remember { mutableStateOf(initial?.durationMinutes?.toString() ?: "") }
+    var calories by remember { mutableStateOf(initial?.caloriesBurned?.toString() ?: "") }
+    var notes by remember { mutableStateOf(initial?.notes ?: "") }
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Workout") },
+        title = { Text(if (initial != null) "Edit Workout" else "Add Workout") },
         text = {
             Column {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Exercise Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -136,6 +160,8 @@ fun AddWorkoutDialog(
                     OutlinedTextField(value = calories, onValueChange = { calories = it }, label = { Text("Calories") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = duration, onValueChange = { duration = it }, label = { Text("Duration (min)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") }, modifier = Modifier.fillMaxWidth())
             }
         },
@@ -148,7 +174,7 @@ fun AddWorkoutDialog(
                     onAdd(name, s, r, weight.toDoubleOrNull(), duration.toIntOrNull(), calories.toIntOrNull(), notes.ifBlank { null })
                 },
                 enabled = name.isNotBlank()
-            ) { Text("Add") }
+            ) { Text(if (initial != null) "Save" else "Add") }
         },
         dismissButton = {
             androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }

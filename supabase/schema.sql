@@ -16,6 +16,14 @@ create table if not exists user_profiles (
   "gender" text,
   "fitnessGoal" text,
   "activityLevel" text,
+  "workoutFrequency" text,
+  "equipment" text,
+  "injuries" text,
+  "lifestyle" text,
+  "sleepHours" double precision,
+  "stressLevel" text,
+  "cycleLength" integer,
+  "lastPeriodStart" bigint,
   "updatedAt" bigint
 );
 
@@ -48,6 +56,18 @@ create table if not exists calorie_entries (
   "createdAt" bigint
 );
 
+create table if not exists blood_reports (
+  "id" bigint primary key,
+  "userId" uuid,
+  "reportDate" bigint,
+  "source" text,
+  "rawText" text,
+  "markersJson" text,
+  "analysisText" text,
+  "synced" boolean default false,
+  "createdAt" bigint
+);
+
 -- PostgREST role privileges
 grant select on table user_profiles to anon;
 grant select, insert, update, delete on table user_profiles to authenticated;
@@ -61,10 +81,15 @@ grant select on table calorie_entries to anon;
 grant select, insert, update, delete on table calorie_entries to authenticated;
 grant select, insert, update, delete on table calorie_entries to service_role;
 
+grant select on table blood_reports to anon;
+grant select, insert, update, delete on table blood_reports to authenticated;
+grant select, insert, update, delete on table blood_reports to service_role;
+
 -- Row Level Security
 alter table user_profiles enable row level security;
 alter table workouts enable row level security;
 alter table calorie_entries enable row level security;
+alter table blood_reports enable row level security;
 
 drop policy if exists "profiles_own" on user_profiles;
 create policy "profiles_own" on user_profiles
@@ -76,6 +101,10 @@ create policy "workouts_own" on workouts
 
 drop policy if exists "calories_own" on calorie_entries;
 create policy "calories_own" on calorie_entries
+  for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+drop policy if exists "blood_own" on blood_reports;
+create policy "blood_own" on blood_reports
   for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
 
 -- Auto-create a profile row whenever a new auth user signs up.

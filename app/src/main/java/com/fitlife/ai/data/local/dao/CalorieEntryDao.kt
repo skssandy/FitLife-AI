@@ -18,6 +18,12 @@ interface CalorieEntryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entry: CalorieEntryEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(entries: List<CalorieEntryEntity>)
+
+    @Query("SELECT * FROM calorie_entries WHERE id = :id")
+    suspend fun getById(id: Long): CalorieEntryEntity?
+
     @Query("UPDATE calorie_entries SET synced = 1 WHERE id = :id")
     suspend fun markSynced(id: Long)
 

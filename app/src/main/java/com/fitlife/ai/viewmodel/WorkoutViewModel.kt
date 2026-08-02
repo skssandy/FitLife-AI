@@ -81,4 +81,14 @@ class WorkoutViewModel @Inject constructor(
             workoutRepository.deleteWorkout(id)
         }
     }
+
+    fun updateWorkout(workout: WorkoutEntity) {
+        viewModelScope.launch {
+            try {
+                workoutRepository.updateWorkout(workout)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
 }

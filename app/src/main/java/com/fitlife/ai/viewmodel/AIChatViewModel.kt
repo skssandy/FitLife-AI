@@ -5,8 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitlife.ai.BuildConfig
 import com.fitlife.ai.data.local.entity.ChatMessageEntity
+import com.fitlife.ai.data.local.entity.UserEntity
 import com.fitlife.ai.data.repository.AuthRepository
 import com.fitlife.ai.data.local.dao.ChatMessageDao
+import com.fitlife.ai.util.CycleCalculator
+import com.fitlife.ai.util.CyclePhase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -87,7 +90,9 @@ class AIChatViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                val response = withContext(Dispatchers.IO) { callGeminiApi(apiKey, text) }
+                val profile = authRepository.getUserOnce(userId)
+                val instruction = buildSystemInstruction(profile)
+                val response = withContext(Dispatchers.IO) { callGeminiApi(apiKey, text, instruction) }
                 val aiMessage = ChatMessageEntity(userId = userId, role = "assistant", content = response)
                 chatMessageDao.insert(aiMessage)
                 _uiState.value = _uiState.value.copy(isLoading = false)
@@ -98,7 +103,36 @@ class AIChatViewModel @Inject constructor(
         }
     }
 
-    private fun callGeminiApi(apiKey: String, prompt: String): String {
+    private fun buildSystemInstruction(profile: UserEntity?): String {
+        val base = "You are a professional fitness trainer and nutritionist. " +
+            "Provide helpful, accurate advice about exercise, nutrition, and healthy living. " +
+            "Keep responses concise and actionable."
+        val context = StringBuilder()
+        if (profile != null) {
+            context.append("User profile: ")
+            context.append("gender=${profile.gender ?: "unknown"}")
+            if (profile.displayName != null) context.append(", name=${profile.displayName}")
+            if (profile.heightCm != null) context.append(", height=${profile.heightCm}cm")
+            if (profile.weightKg != null) context.append(", weight=${profile.weightKg}kg")
+            if (profile.fitnessGoal != null) context.append(", goal=${profile.fitnessGoal}")
+            if (profile.activityLevel != null) context.append(", activity=${profile.activityLevel}")
+            if (profile.injuries != null) context.append(", injuries=${profile.injuries}")
+            if (profile.workoutFrequency != null) context.append(", workout frequency=${profile.workoutFrequency}")
+            context.append(". ")
+            val lastPeriod = profile.lastPeriodStart
+            val cycleLength = profile.cycleLength
+            if (profile.gender.equals("Female", ignoreCase = true) && lastPeriod != null && lastPeriod > 0) {
+                val len = (cycleLength ?: 28).coerceAtLeast(21)
+                val day = CycleCalculator.cycleDay(System.currentTimeMillis(), lastPeriod, len)
+                val phase = CycleCalculator.phaseForDay(day)
+                context.append("The user is on day $day of their menstrual cycle (${phase.displayName} phase). ")
+                context.append("Phase guidance: training=${phase.training} nutrition=${phase.nutrition}. ")
+            }
+        }
+        return base + " " + context.toString()
+    }
+
+    private fun callGeminiApi(apiKey: String, prompt: String, instruction: String): String {
         val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$apiKey")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
@@ -116,7 +150,7 @@ class AIChatViewModel @Inject constructor(
             put("systemInstruction", JSONObject().apply {
                 put("parts", JSONArray().apply {
                     put(JSONObject().apply {
-                        put("text", "You are a professional fitness trainer and nutritionist. Provide helpful, accurate advice about exercise, nutrition, and healthy living. Keep responses concise and actionable.")
+                        put("text", instruction)
                     })
                 })
             })

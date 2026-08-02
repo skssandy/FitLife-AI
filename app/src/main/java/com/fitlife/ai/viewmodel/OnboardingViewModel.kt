@@ -20,6 +20,13 @@ data class OnboardingUiState(
     val error: String? = null
 )
 
+data class InitialTargets(
+    val bmi: Double?,
+    val tdee: Int?,
+    val calorieTarget: Int?,
+    val proteinTarget: Int?
+)
+
 @HiltViewModel
 class OnboardingViewModel @Inject constructor(
     private val authRepository: AuthRepository
@@ -56,6 +63,14 @@ class OnboardingViewModel @Inject constructor(
         gender: String?,
         fitnessGoal: String?,
         activityLevel: String?,
+        workoutFrequency: String? = null,
+        equipment: String? = null,
+        injuries: String? = null,
+        lifestyle: String? = null,
+        sleepHours: Double? = null,
+        stressLevel: String? = null,
+        cycleLength: Int? = null,
+        lastPeriodStart: Long? = null,
         onDone: () -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -74,7 +89,15 @@ class OnboardingViewModel @Inject constructor(
                         dateOfBirth = dateOfBirth,
                         gender = gender,
                         fitnessGoal = fitnessGoal,
-                        activityLevel = activityLevel
+                        activityLevel = activityLevel,
+                        workoutFrequency = workoutFrequency,
+                        equipment = equipment,
+                        injuries = injuries,
+                        lifestyle = lifestyle,
+                        sleepHours = sleepHours,
+                        stressLevel = stressLevel,
+                        cycleLength = cycleLength,
+                        lastPeriodStart = lastPeriodStart
                     )
                 )
                 _uiState.value = _uiState.value.copy(isSaving = false)
@@ -83,5 +106,45 @@ class OnboardingViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(isSaving = false, error = e.message)
             }
         }
+    }
+
+    fun computeTargets(
+        heightCm: Double?,
+        weightKg: Double?,
+        dateOfBirth: String?,
+        gender: String?,
+        activityLevel: String?,
+        fitnessGoal: String?
+    ): InitialTargets {
+        val h = heightCm ?: return InitialTargets(null, null, null, null)
+        val w = weightKg ?: return InitialTargets(null, null, null, null)
+        val bmi = w / ((h / 100.0) * (h / 100.0))
+
+        val age = dateOfBirth?.let {
+            val parts = it.split("-")
+            val year = parts.getOrNull(0)?.toIntOrNull() ?: return@let null
+            val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+            currentYear - year
+        }
+
+        val genderConstant = if (gender.equals("Female", ignoreCase = true)) -161 else 5
+        val bmr = ((10 * w) + (6.25 * h) - (5 * (age ?: 30)) + genderConstant).toInt()
+        val activityMultiplier = when (activityLevel) {
+            "Sedentary" -> 1.2
+            "Light" -> 1.375
+            "Moderate" -> 1.55
+            "Active" -> 1.725
+            "Very Active" -> 1.9
+            else -> 1.375
+        }
+        val tdee = (bmr * activityMultiplier).toInt()
+
+        val calorieTarget = when (fitnessGoal) {
+            "Weight Loss" -> tdee - 400
+            "Muscle Gain" -> tdee + 300
+            else -> tdee
+        }
+        val proteinTarget = (w * 1.8).toInt()
+        return InitialTargets(bmi = bmi, tdee = tdee, calorieTarget = calorieTarget, proteinTarget = proteinTarget)
     }
 }

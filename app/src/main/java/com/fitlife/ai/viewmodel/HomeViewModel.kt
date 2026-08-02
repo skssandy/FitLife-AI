@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val userName: String = "",
+    val userGender: String? = null,
     val todayWorkouts: List<WorkoutEntity> = emptyList(),
     val totalWorkouts: Int = 0,
     val totalCalories: Int = 0,
@@ -60,6 +61,7 @@ class HomeViewModel @Inject constructor(
                 ) { workouts, entries ->
                     HomeUiState(
                         userName = user?.displayName ?: user?.email ?: "User",
+                        userGender = user?.gender,
                         todayWorkouts = workouts,
                         totalWorkouts = workouts.size,
                         totalCalories = entries.filter { it.date in todayStart until todayEnd }

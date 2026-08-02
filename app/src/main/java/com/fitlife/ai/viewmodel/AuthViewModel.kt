@@ -4,6 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitlife.ai.data.local.entity.UserEntity
 import com.fitlife.ai.data.repository.AuthRepository
+import com.fitlife.ai.data.repository.BloodReportRepository
+import com.fitlife.ai.data.repository.CalorieRepository
+import com.fitlife.ai.data.repository.WorkoutRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +23,10 @@ data class AuthUiState(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val workoutRepository: WorkoutRepository,
+    private val calorieRepository: CalorieRepository,
+    private val bloodReportRepository: BloodReportRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthUiState())
@@ -37,6 +43,7 @@ class AuthViewModel @Inject constructor(
             sessionChecked.value = true
             if (loggedIn) {
                 loadUserProfile()
+                pullAll()
             }
         }
     }
@@ -48,6 +55,7 @@ class AuthViewModel @Inject constructor(
                 authRepository.signUp(email, password)
                 _uiState.value = _uiState.value.copy(isLoading = false, isLoggedIn = true)
                 isLoggedIn.value = true
+                pullAll()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Sign up failed")
             }
@@ -61,6 +69,7 @@ class AuthViewModel @Inject constructor(
                 authRepository.signIn(email, password)
                 _uiState.value = _uiState.value.copy(isLoading = false, isLoggedIn = true)
                 isLoggedIn.value = true
+                pullAll()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Sign in failed")
             }
@@ -91,6 +100,15 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             val user = authRepository.loadUserFromSupabase()
             _uiState.value = _uiState.value.copy(user = user)
+        }
+    }
+
+    private fun pullAll() {
+        viewModelScope.launch {
+            val userId = authRepository.getUserId() ?: return@launch
+            workoutRepository.pullFromServer(userId)
+            calorieRepository.pullFromServer(userId)
+            bloodReportRepository.pullFromServer(userId)
         }
     }
 

@@ -39,6 +39,17 @@ class WorkoutRepository @Inject constructor(
         } catch (_: Exception) { }
     }
 
+    suspend fun updateWorkout(workout: WorkoutEntity) {
+        val updated = workout.copy(synced = false)
+        workoutDao.upsertAll(listOf(updated))
+        try {
+            withContext(Dispatchers.IO) {
+                supabase.from("workouts").upsert(updated)
+                workoutDao.markSynced(updated.id)
+            }
+        } catch (_: Exception) { }
+    }
+
     suspend fun syncUnsynced() {
         val unsynced = workoutDao.getUnsyncedWorkouts()
         for (w in unsynced) {
@@ -49,5 +60,20 @@ class WorkoutRepository @Inject constructor(
                 }
             } catch (_: Exception) { }
         }
+    }
+
+    suspend fun pullFromServer(userId: String) {
+        try {
+            val remote = withContext(Dispatchers.IO) {
+                supabase.from("workouts")
+                    .select { filter { eq("userId", userId) } }
+                    .decodeList<WorkoutEntity>()
+            }
+            val toInsert = remote.filter { w ->
+                val local = workoutDao.getById(w.id)
+                local == null || local.synced
+            }.map { it.copy(synced = true) }
+            if (toInsert.isNotEmpty()) workoutDao.upsertAll(toInsert)
+        } catch (_: Exception) { }
     }
 }

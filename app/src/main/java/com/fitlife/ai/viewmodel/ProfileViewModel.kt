@@ -62,7 +62,15 @@ class ProfileViewModel @Inject constructor(
                     dateOfBirth = dateOfBirth,
                     gender = gender,
                     fitnessGoal = fitnessGoal,
-                    activityLevel = activityLevel
+                    activityLevel = activityLevel,
+                    workoutFrequency = currentUser?.workoutFrequency,
+                    equipment = currentUser?.equipment,
+                    injuries = currentUser?.injuries,
+                    lifestyle = currentUser?.lifestyle,
+                    sleepHours = currentUser?.sleepHours,
+                    stressLevel = currentUser?.stressLevel,
+                    cycleLength = currentUser?.cycleLength,
+                    lastPeriodStart = currentUser?.lastPeriodStart
                 )
                 authRepository.saveProfile(updatedUser)
                 _uiState.value = _uiState.value.copy(user = updatedUser, isSaving = false)

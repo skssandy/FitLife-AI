@@ -32,7 +32,9 @@ import androidx.navigation.compose.rememberNavController
 import com.fitlife.ai.ui.screens.ai.AIChatScreen
 import com.fitlife.ai.ui.screens.auth.LoginScreen
 import com.fitlife.ai.ui.screens.auth.SignupScreen
+import com.fitlife.ai.ui.screens.blood.BloodScreen
 import com.fitlife.ai.ui.screens.camera.CalorieTrackerScreen
+import com.fitlife.ai.ui.screens.cycle.CycleScreen
 import com.fitlife.ai.ui.screens.home.HomeScreen
 import com.fitlife.ai.ui.screens.onboarding.OnboardingScreen
 import com.fitlife.ai.ui.screens.profile.ProfileScreen
@@ -144,11 +146,18 @@ fun AppNavHost() {
                     }
                 )
             }
-            composable(Routes.Home.route) { HomeScreen() }
+            composable(Routes.Home.route) {
+                HomeScreen(
+                    onOpenBlood = { navController.navigate(Routes.Blood.route) },
+                    onOpenCycle = { navController.navigate(Routes.Cycle.route) }
+                )
+            }
             composable(Routes.Profile.route) { ProfileScreen(onNavigateToSettings = { navController.navigate(Routes.Settings.route) }) }
             composable(Routes.Workout.route) { WorkoutScreen() }
             composable(Routes.AIChat.route) { AIChatScreen() }
             composable(Routes.CalorieTracker.route) { CalorieTrackerScreen() }
+            composable(Routes.Blood.route) { BloodScreen() }
+            composable(Routes.Cycle.route) { CycleScreen() }
             composable(Routes.Settings.route) { SettingsScreen(viewModel = authViewModel) }
         }
     }

@@ -26,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -52,6 +53,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.fitlife.ai.data.local.entity.CalorieEntryEntity
 import com.fitlife.ai.viewmodel.CalorieTrackerViewModel
 import java.nio.ByteBuffer
 
@@ -63,6 +65,7 @@ fun CalorieTrackerScreen(
     val context = LocalContext.current
     var showCamera by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<CalorieEntryEntity?>(null) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -147,6 +150,9 @@ fun CalorieTrackerScreen(
                             entry.mealType?.let { Text(" · $it", style = MaterialTheme.typography.bodyMedium) }
                         }
                     }
+                    IconButton(onClick = { editing = entry; showAddDialog = true }) {
+                        Icon(Icons.Default.Edit, "Edit")
+                    }
                     IconButton(onClick = { viewModel.deleteEntry(entry.id) }) {
                         Icon(Icons.Default.Delete, "Delete")
                     }
@@ -166,14 +172,25 @@ fun CalorieTrackerScreen(
     }
 
     if (showAddDialog) {
+        val entry = editing
         AddCalorieDialog(
-            initialFoodName = uiState.scannedFood,
-            initialCalories = uiState.scannedCalories?.toString(),
-            onDismiss = { showAddDialog = false },
-            onAdd = { name, calories, mealType ->
-                viewModel.addEntry(name, calories, mealType)
+            editing = entry != null,
+            initialFoodName = entry?.foodName ?: uiState.scannedFood,
+            initialCalories = entry?.calories?.toString() ?: uiState.scannedCalories?.toString(),
+            initialMealType = entry?.mealType,
+            initialProtein = entry?.proteinG?.toString() ?: uiState.scannedProtein?.toString(),
+            initialCarbs = entry?.carbsG?.toString() ?: uiState.scannedCarbs?.toString(),
+            initialFat = entry?.fatG?.toString() ?: uiState.scannedFat?.toString(),
+            onDismiss = { showAddDialog = false; editing = null },
+            onAdd = { name, calories, mealType, protein, carbs, fat ->
+                if (entry != null) {
+                    viewModel.updateEntry(entry.id, name, calories, mealType)
+                } else {
+                    viewModel.addEntry(name, calories, mealType, protein, carbs, fat)
+                }
                 viewModel.clearScan()
                 showAddDialog = false
+                editing = null
             }
         )
     }
@@ -232,23 +249,43 @@ private fun imageProxyToBitmap(image: ImageProxy): Bitmap {
 
 @Composable
 fun AddCalorieDialog(
+    editing: Boolean = false,
     initialFoodName: String? = null,
     initialCalories: String? = null,
+    initialMealType: String? = null,
+    initialProtein: String? = null,
+    initialCarbs: String? = null,
+    initialFat: String? = null,
     onDismiss: () -> Unit,
-    onAdd: (String, Int, String?) -> Unit
+    onAdd: (String, Int, String?, Double?, Double?, Double?) -> Unit
 ) {
     var foodName by remember { mutableStateOf(initialFoodName ?: "") }
     var calories by remember { mutableStateOf(initialCalories ?: "") }
-    var mealType by remember { mutableStateOf("") }
+    var mealType by remember { mutableStateOf(initialMealType ?: "") }
+    var protein by remember { mutableStateOf(initialProtein ?: "") }
+    var carbs by remember { mutableStateOf(initialCarbs ?: "") }
+    var fat by remember { mutableStateOf(initialFat ?: "") }
 
-    LaunchedEffect(initialFoodName, initialCalories) {
+    LaunchedEffect(initialFoodName, initialCalories, initialMealType, initialProtein, initialCarbs, initialFat) {
         foodName = initialFoodName ?: ""
         calories = initialCalories ?: ""
+        mealType = initialMealType ?: ""
+        protein = initialProtein ?: ""
+        carbs = initialCarbs ?: ""
+        fat = initialFat ?: ""
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialFoodName != null) "Scan Result" else "Add Calorie Entry") },
+        title = {
+            Text(
+                when {
+                    editing -> "Edit Calorie Entry"
+                    initialFoodName != null -> "Scan Result"
+                    else -> "Add Calorie Entry"
+                }
+            )
+        },
         text = {
             Column {
                 OutlinedTextField(value = foodName, onValueChange = { foodName = it }, label = { Text("Food Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -256,6 +293,13 @@ fun AddCalorieDialog(
                 OutlinedTextField(value = calories, onValueChange = { calories = it }, label = { Text("Calories") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(value = mealType, onValueChange = { mealType = it }, label = { Text("Meal Type") }, placeholder = { Text("breakfast/lunch/dinner/snack") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = protein, onValueChange = { protein = it }, label = { Text("Protein (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(value = carbs, onValueChange = { carbs = it }, label = { Text("Carbs (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = fat, onValueChange = { fat = it }, label = { Text("Fat (g)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
@@ -263,10 +307,17 @@ fun AddCalorieDialog(
                 onClick = {
                     val cal = calories.toIntOrNull() ?: return@TextButton
                     if (foodName.isBlank()) return@TextButton
-                    onAdd(foodName, cal, mealType.ifBlank { null })
+                    onAdd(
+                        foodName,
+                        cal,
+                        mealType.ifBlank { null },
+                        protein.toDoubleOrNull(),
+                        carbs.toDoubleOrNull(),
+                        fat.toDoubleOrNull()
+                    )
                 },
                 enabled = foodName.isNotBlank() && calories.isNotBlank()
-            ) { Text("Add") }
+            ) { Text(if (editing) "Save" else "Add") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )

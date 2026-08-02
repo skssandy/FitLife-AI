@@ -17,5 +17,13 @@ data class UserEntity(
     val gender: String?,
     val fitnessGoal: String?,
     val activityLevel: String?,
+    val workoutFrequency: String?,
+    val equipment: String?,
+    val injuries: String?,
+    val lifestyle: String?,
+    val sleepHours: Double?,
+    val stressLevel: String?,
+    val cycleLength: Int? = null,
+    val lastPeriodStart: Long? = null,
     val updatedAt: Long = System.currentTimeMillis()
 )

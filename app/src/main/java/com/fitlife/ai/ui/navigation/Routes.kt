@@ -9,5 +9,7 @@ sealed class Routes(val route: String) {
     data object Workout : Routes("workout")
     data object AIChat : Routes("ai_chat")
     data object CalorieTracker : Routes("calorie_tracker")
+    data object Blood : Routes("blood")
+    data object Cycle : Routes("cycle")
     data object Settings : Routes("settings")
 }

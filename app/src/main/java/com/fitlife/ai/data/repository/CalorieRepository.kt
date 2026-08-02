@@ -41,6 +41,17 @@ class CalorieRepository @Inject constructor(
         } catch (_: Exception) { }
     }
 
+    suspend fun updateEntry(entry: CalorieEntryEntity) {
+        val updated = entry.copy(synced = false)
+        calorieEntryDao.upsertAll(listOf(updated))
+        try {
+            withContext(Dispatchers.IO) {
+                supabase.from("calorie_entries").upsert(updated)
+                calorieEntryDao.markSynced(updated.id)
+            }
+        } catch (_: Exception) { }
+    }
+
     suspend fun syncUnsynced() {
         val unsynced = calorieEntryDao.getUnsyncedEntries()
         for (e in unsynced) {
@@ -51,5 +62,20 @@ class CalorieRepository @Inject constructor(
                 }
             } catch (_: Exception) { }
         }
+    }
+
+    suspend fun pullFromServer(userId: String) {
+        try {
+            val remote = withContext(Dispatchers.IO) {
+                supabase.from("calorie_entries")
+                    .select { filter { eq("userId", userId) } }
+                    .decodeList<CalorieEntryEntity>()
+            }
+            val toInsert = remote.filter { e ->
+                val local = calorieEntryDao.getById(e.id)
+                local == null || local.synced
+            }.map { it.copy(synced = true) }
+            if (toInsert.isNotEmpty()) calorieEntryDao.upsertAll(toInsert)
+        } catch (_: Exception) { }
     }
 }
