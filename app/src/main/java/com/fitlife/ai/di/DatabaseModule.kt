@@ -8,6 +8,7 @@ import com.fitlife.ai.data.local.AppDatabase
 import com.fitlife.ai.data.local.dao.BloodReportDao
 import com.fitlife.ai.data.local.dao.CalorieEntryDao
 import com.fitlife.ai.data.local.dao.ChatMessageDao
+import com.fitlife.ai.data.local.dao.DailyMetricDao
 import com.fitlife.ai.data.local.dao.FoodItemDao
 import com.fitlife.ai.data.local.dao.UserDao
 import com.fitlife.ai.data.local.dao.WaterLogDao
@@ -117,6 +118,33 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS daily_metrics (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "userId TEXT NOT NULL, " +
+                    "date INTEGER NOT NULL, " +
+                    "steps INTEGER, " +
+                    "heartRateAvg INTEGER, " +
+                    "hrvAvg INTEGER, " +
+                    "sleepMinutes INTEGER, " +
+                    "sleepStagesJson TEXT, " +
+                    "caloriesBurned INTEGER, " +
+                    "activeMinutes INTEGER, " +
+                    "weightKg REAL, " +
+                    "bodyFatPct REAL, " +
+                    "source TEXT NOT NULL, " +
+                    "synced INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS index_daily_metrics_userId_date " +
+                    "ON daily_metrics (userId, date)"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
@@ -128,7 +156,8 @@ object DatabaseModule {
                 MIGRATION_4_5,
                 MIGRATION_5_6,
                 MIGRATION_6_7,
-                MIGRATION_7_8
+                MIGRATION_7_8,
+                MIGRATION_8_9
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -141,4 +170,5 @@ object DatabaseModule {
     @Provides fun provideWaterLogDao(db: AppDatabase): WaterLogDao = db.waterLogDao()
     @Provides fun provideFoodItemDao(db: AppDatabase): FoodItemDao = db.foodItemDao()
     @Provides fun provideWorkoutProgramDao(db: AppDatabase): WorkoutProgramDao = db.workoutProgramDao()
+    @Provides fun provideDailyMetricDao(db: AppDatabase): DailyMetricDao = db.dailyMetricDao()
 }

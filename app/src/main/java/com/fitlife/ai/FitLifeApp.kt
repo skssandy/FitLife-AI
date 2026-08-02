@@ -9,6 +9,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.fitlife.ai.worker.HealthSyncWorker
 import com.fitlife.ai.worker.SyncWorker
 import com.fitlife.ai.data.repository.FoodRepository
 import dagger.hilt.android.HiltAndroidApp
@@ -61,5 +62,13 @@ class FitLifeApp : Application(), Configuration.Provider {
             .setConstraints(constraints)
             .build()
         WorkManager.getInstance(this).enqueue(once)
+
+        val healthPeriodic = PeriodicWorkRequestBuilder<HealthSyncWorker>(4, TimeUnit.HOURS)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "health_sync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            healthPeriodic
+        )
     }
 }

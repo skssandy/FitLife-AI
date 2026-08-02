@@ -82,6 +82,26 @@ create table if not exists water_logs (
   "createdAt" bigint
 );
 
+create table if not exists daily_metrics (
+  "id" bigint primary key,
+  "userId" uuid,
+  "date" bigint,
+  "steps" integer,
+  "heartRateAvg" integer,
+  "hrvAvg" integer,
+  "sleepMinutes" integer,
+  "sleepStagesJson" text,
+  "caloriesBurned" integer,
+  "activeMinutes" integer,
+  "weightKg" double precision,
+  "bodyFatPct" double precision,
+  "source" text,
+  "synced" boolean default false,
+  "createdAt" bigint
+);
+
+create unique index if not exists daily_metrics_userId_date_idx on daily_metrics ("userId", "date");
+
 -- PostgREST role privileges
 grant select on table user_profiles to anon;
 grant select, insert, update, delete on table user_profiles to authenticated;
@@ -103,6 +123,10 @@ grant select on table water_logs to anon;
 grant select, insert, update, delete on table water_logs to authenticated;
 grant select, insert, update, delete on table water_logs to service_role;
 
+grant select on table daily_metrics to anon;
+grant select, insert, update, delete on table daily_metrics to authenticated;
+grant select, insert, update, delete on table daily_metrics to service_role;
+
 -- Row Level Security
 alter table user_profiles enable row level security;
 alter table workouts enable row level security;
@@ -114,6 +138,12 @@ create policy "water_own" on water_logs
   for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
 
 alter table water_logs enable row level security;
+
+drop policy if exists "metrics_own" on daily_metrics;
+create policy "metrics_own" on daily_metrics
+  for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+alter table daily_metrics enable row level security;
 
 drop policy if exists "profiles_own" on user_profiles;
 create policy "profiles_own" on user_profiles

@@ -5,6 +5,7 @@ import androidx.room.RoomDatabase
 import com.fitlife.ai.data.local.dao.BloodReportDao
 import com.fitlife.ai.data.local.dao.CalorieEntryDao
 import com.fitlife.ai.data.local.dao.ChatMessageDao
+import com.fitlife.ai.data.local.dao.DailyMetricDao
 import com.fitlife.ai.data.local.dao.FoodItemDao
 import com.fitlife.ai.data.local.dao.UserDao
 import com.fitlife.ai.data.local.dao.WaterLogDao
@@ -13,6 +14,7 @@ import com.fitlife.ai.data.local.dao.WorkoutProgramDao
 import com.fitlife.ai.data.local.entity.BloodReportEntity
 import com.fitlife.ai.data.local.entity.CalorieEntryEntity
 import com.fitlife.ai.data.local.entity.ChatMessageEntity
+import com.fitlife.ai.data.local.entity.DailyMetricEntity
 import com.fitlife.ai.data.local.entity.FoodItemEntity
 import com.fitlife.ai.data.local.entity.UserEntity
 import com.fitlife.ai.data.local.entity.WaterLogEntity
@@ -28,9 +30,10 @@ import com.fitlife.ai.data.local.entity.WorkoutProgramEntity
         BloodReportEntity::class,
         WaterLogEntity::class,
         FoodItemEntity::class,
-        WorkoutProgramEntity::class
+        WorkoutProgramEntity::class,
+        DailyMetricEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,4 +45,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun waterLogDao(): WaterLogDao
     abstract fun foodItemDao(): FoodItemDao
     abstract fun workoutProgramDao(): WorkoutProgramDao
+    abstract fun dailyMetricDao(): DailyMetricDao
 }

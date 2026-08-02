@@ -12,6 +12,7 @@ sealed class Routes(val route: String) {
     data object CalorieTracker : Routes("calorie_tracker")
     data object NutritionPlan : Routes("nutrition_plan")
     data object Blood : Routes("blood")
+    data object Health : Routes("health")
     data object Cycle : Routes("cycle")
     data object Water : Routes("water")
     data object Settings : Routes("settings")

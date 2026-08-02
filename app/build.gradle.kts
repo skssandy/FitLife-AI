@@ -20,7 +20,7 @@ val geminiApiKey: String = run {
 
 android {
     namespace = "com.fitlife.ai"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.fitlife.ai"
@@ -95,6 +95,8 @@ dependencies {
 
     implementation("com.google.mlkit:text-recognition:16.0.0")
     implementation("com.google.mlkit:barcode-scanning:17.2.0")
+
+    implementation("androidx.health.connect:connect-client:1.1.0")
 
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
