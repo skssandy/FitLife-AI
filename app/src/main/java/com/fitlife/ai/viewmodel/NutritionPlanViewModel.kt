@@ -58,14 +58,24 @@ class NutritionPlanViewModel @Inject constructor(
                 val foods = foodRepository.allOnce()
 
                 val targets = user?.let {
-                    val tdee = NutritionCalculator.calculateTDEE(
-                        it.weightKg ?: 0.0,
-                        it.heightCm ?: 0.0,
-                        it.dateOfBirth,
-                        it.gender,
-                        it.activityLevel
-                    )
-                    NutritionCalculator.calculateMacros(tdee, it.fitnessGoal, it.weightKg ?: 60.0)
+                    val saved = if (
+                        it.calorieTarget != null && it.proteinTargetG != null &&
+                        it.carbsTargetG != null && it.fatTargetG != null
+                    ) {
+                        MacroTargets(it.calorieTarget, it.proteinTargetG, it.carbsTargetG, it.fatTargetG)
+                    } else {
+                        null
+                    }
+                    saved ?: run {
+                        val tdee = NutritionCalculator.calculateTDEE(
+                            it.weightKg ?: 0.0,
+                            it.heightCm ?: 0.0,
+                            it.dateOfBirth,
+                            it.gender,
+                            it.activityLevel
+                        )
+                        NutritionCalculator.calculateMacros(tdee, it.fitnessGoal, it.weightKg ?: 60.0)
+                    }
                 }
                 val hydrationTarget = user?.let {
                     it.hydrationTargetMl
