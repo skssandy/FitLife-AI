@@ -53,8 +53,10 @@ class CycleViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val userId = authRepository.getCurrentUserId()
-                authRepository.observeUser(userId).collect { user ->
-                    _uiState.value = _uiState.value.copy(user = user, isLoading = false)
+                launch {
+                    authRepository.observeUser(userId).collect { user ->
+                        _uiState.value = _uiState.value.copy(user = user, isLoading = false)
+                    }
                 }
                 launch {
                     cycleRepository.getEntries(userId).collect { entries ->
