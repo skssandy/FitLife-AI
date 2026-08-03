@@ -29,21 +29,23 @@ class CycleRepository @Inject constructor(
         symptomLogDao.getForDay(userId, date)
 
     suspend fun upsertEntry(entry: CycleEntryEntity) {
-        cycleEntryDao.upsert(entry)
+        val id = cycleEntryDao.upsert(entry)
+        val toSync = entry.copy(id = id)
         try {
             withContext(Dispatchers.IO) {
-                supabase.from("cycle_entries").upsert(entry)
-                cycleEntryDao.markSynced(entry.id)
+                supabase.from("cycle_entries").upsert(toSync)
+                cycleEntryDao.markSynced(id)
             }
         } catch (_: Exception) { }
     }
 
     suspend fun upsertSymptomLog(log: SymptomLogEntity) {
-        symptomLogDao.upsert(log)
+        val id = symptomLogDao.upsert(log)
+        val toSync = log.copy(id = id)
         try {
             withContext(Dispatchers.IO) {
-                supabase.from("symptom_logs").upsert(log)
-                symptomLogDao.markSynced(log.id)
+                supabase.from("symptom_logs").upsert(toSync)
+                symptomLogDao.markSynced(id)
             }
         } catch (_: Exception) { }
     }
@@ -74,8 +76,10 @@ class CycleRepository @Inject constructor(
                     .select { filter { eq("userId", userId) } }
                     .decodeList<CycleEntryEntity>()
             }
-            val localEntries = cycleEntryDao.getUnsynced().map { it.startDate }.toSet()
-            val toInsert = remoteEntries.filter { it.startDate !in localEntries }
+            val toInsert = remoteEntries.filter { e ->
+                val local = cycleEntryDao.getById(e.id)
+                local == null || local.synced
+            }.map { it.copy(synced = true) }
             if (toInsert.isNotEmpty()) cycleEntryDao.upsertAll(toInsert)
 
             val remoteLogs = withContext(Dispatchers.IO) {
@@ -83,8 +87,10 @@ class CycleRepository @Inject constructor(
                     .select { filter { eq("userId", userId) } }
                     .decodeList<SymptomLogEntity>()
             }
-            val localLogs = symptomLogDao.getUnsynced().map { it.date }.toSet()
-            val logsToInsert = remoteLogs.filter { it.date !in localLogs }
+            val logsToInsert = remoteLogs.filter { l ->
+                val local = symptomLogDao.getById(l.id)
+                local == null || local.synced
+            }.map { it.copy(synced = true) }
             if (logsToInsert.isNotEmpty()) symptomLogDao.upsertAll(logsToInsert)
         } catch (_: Exception) { }
     }

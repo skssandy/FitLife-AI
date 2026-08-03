@@ -11,11 +11,14 @@ interface DailyMetricDao {
     @Query("SELECT * FROM daily_metrics WHERE userId = :userId ORDER BY date DESC")
     fun getMetrics(userId: String): Flow<List<DailyMetricEntity>>
 
+    @Query("SELECT * FROM daily_metrics WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): DailyMetricEntity?
+
     @Query("SELECT * FROM daily_metrics WHERE userId = :userId AND date = :date LIMIT 1")
     suspend fun getForDay(userId: String, date: Long): DailyMetricEntity?
 
     @Upsert
-    suspend fun upsert(metric: DailyMetricEntity)
+    suspend fun upsert(metric: DailyMetricEntity): Long
 
     @Upsert
     suspend fun upsertAll(metrics: List<DailyMetricEntity>)

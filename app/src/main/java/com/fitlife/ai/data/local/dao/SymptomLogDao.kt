@@ -14,8 +14,11 @@ interface SymptomLogDao {
     @Query("SELECT * FROM symptom_logs WHERE userId = :userId AND date = :date LIMIT 1")
     suspend fun getForDay(userId: String, date: Long): SymptomLogEntity?
 
+    @Query("SELECT * FROM symptom_logs WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): SymptomLogEntity?
+
     @Upsert
-    suspend fun upsert(log: SymptomLogEntity)
+    suspend fun upsert(log: SymptomLogEntity): Long
 
     @Upsert
     suspend fun upsertAll(logs: List<SymptomLogEntity>)

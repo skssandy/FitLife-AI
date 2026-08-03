@@ -21,11 +21,12 @@ class DailyMetricRepository @Inject constructor(
         dailyMetricDao.getForDay(userId, date)
 
     suspend fun upsert(metric: DailyMetricEntity) {
-        dailyMetricDao.upsert(metric)
+        val id = dailyMetricDao.upsert(metric)
+        val toSync = metric.copy(id = id)
         try {
             withContext(Dispatchers.IO) {
-                supabase.from("daily_metrics").upsert(metric)
-                dailyMetricDao.markSynced(metric.id)
+                supabase.from("daily_metrics").upsert(toSync)
+                dailyMetricDao.markSynced(id)
             }
         } catch (_: Exception) { }
     }
@@ -48,8 +49,10 @@ class DailyMetricRepository @Inject constructor(
                     .select { filter { eq("userId", userId) } }
                     .decodeList<DailyMetricEntity>()
             }
-            val local = dailyMetricDao.getUnsynced().map { it.date }.toSet()
-            val toInsert = remote.filter { it.date !in local }
+            val toInsert = remote.filter { m ->
+                val local = dailyMetricDao.getById(m.id)
+                local == null || local.synced
+            }.map { it.copy(synced = true) }
             if (toInsert.isNotEmpty()) dailyMetricDao.upsertAll(toInsert)
         } catch (_: Exception) { }
     }

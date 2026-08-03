@@ -14,8 +14,11 @@ interface CycleEntryDao {
     @Query("SELECT * FROM cycle_entries WHERE userId = :userId ORDER BY startDate DESC")
     suspend fun getEntriesOnce(userId: String): List<CycleEntryEntity>
 
+    @Query("SELECT * FROM cycle_entries WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): CycleEntryEntity?
+
     @Upsert
-    suspend fun upsert(entry: CycleEntryEntity)
+    suspend fun upsert(entry: CycleEntryEntity): Long
 
     @Upsert
     suspend fun upsertAll(entries: List<CycleEntryEntity>)
