@@ -8,8 +8,10 @@ import com.fitlife.ai.data.local.AppDatabase
 import com.fitlife.ai.data.local.dao.BloodReportDao
 import com.fitlife.ai.data.local.dao.CalorieEntryDao
 import com.fitlife.ai.data.local.dao.ChatMessageDao
+import com.fitlife.ai.data.local.dao.CycleEntryDao
 import com.fitlife.ai.data.local.dao.DailyMetricDao
 import com.fitlife.ai.data.local.dao.FoodItemDao
+import com.fitlife.ai.data.local.dao.SymptomLogDao
 import com.fitlife.ai.data.local.dao.UserDao
 import com.fitlife.ai.data.local.dao.WaterLogDao
 import com.fitlife.ai.data.local.dao.WorkoutDao
@@ -145,6 +147,36 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS cycle_entries (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "userId TEXT NOT NULL, " +
+                    "startDate INTEGER NOT NULL, " +
+                    "flowLevel TEXT NOT NULL, " +
+                    "symptomsJson TEXT NOT NULL, " +
+                    "notes TEXT NOT NULL, " +
+                    "synced INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS symptom_logs (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "userId TEXT NOT NULL, " +
+                    "date INTEGER NOT NULL, " +
+                    "symptomsJson TEXT NOT NULL, " +
+                    "synced INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS index_symptom_logs_userId_date " +
+                    "ON symptom_logs (userId, date)"
+            )
+            db.execSQL("ALTER TABLE users ADD COLUMN supportMode TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
@@ -157,7 +189,8 @@ object DatabaseModule {
                 MIGRATION_5_6,
                 MIGRATION_6_7,
                 MIGRATION_7_8,
-                MIGRATION_8_9
+                MIGRATION_8_9,
+                MIGRATION_9_10
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -171,4 +204,6 @@ object DatabaseModule {
     @Provides fun provideFoodItemDao(db: AppDatabase): FoodItemDao = db.foodItemDao()
     @Provides fun provideWorkoutProgramDao(db: AppDatabase): WorkoutProgramDao = db.workoutProgramDao()
     @Provides fun provideDailyMetricDao(db: AppDatabase): DailyMetricDao = db.dailyMetricDao()
+    @Provides fun provideCycleEntryDao(db: AppDatabase): CycleEntryDao = db.cycleEntryDao()
+    @Provides fun provideSymptomLogDao(db: AppDatabase): SymptomLogDao = db.symptomLogDao()
 }

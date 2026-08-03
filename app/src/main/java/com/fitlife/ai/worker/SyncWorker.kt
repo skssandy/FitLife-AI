@@ -7,6 +7,7 @@ import androidx.work.WorkerParameters
 import com.fitlife.ai.data.repository.AuthRepository
 import com.fitlife.ai.data.repository.BloodReportRepository
 import com.fitlife.ai.data.repository.CalorieRepository
+import com.fitlife.ai.data.repository.CycleRepository
 import com.fitlife.ai.data.repository.DailyMetricRepository
 import com.fitlife.ai.data.repository.WaterRepository
 import com.fitlife.ai.data.repository.WorkoutRepository
@@ -22,6 +23,7 @@ class SyncWorker @AssistedInject constructor(
     private val bloodReportRepository: BloodReportRepository,
     private val waterRepository: WaterRepository,
     private val dailyMetricRepository: DailyMetricRepository,
+    private val cycleRepository: CycleRepository,
     private val authRepository: AuthRepository
 ) : CoroutineWorker(context, params) {
 
@@ -32,6 +34,7 @@ class SyncWorker @AssistedInject constructor(
             bloodReportRepository.syncUnsynced()
             waterRepository.syncUnsynced()
             dailyMetricRepository.syncUnsynced()
+            cycleRepository.syncUnsynced()
             val userId = authRepository.getUserId()
             if (userId != null) {
                 workoutRepository.pullFromServer(userId)
@@ -39,6 +42,7 @@ class SyncWorker @AssistedInject constructor(
                 bloodReportRepository.pullFromServer(userId)
                 waterRepository.pullFromServer(userId)
                 dailyMetricRepository.pullFromServer(userId)
+                cycleRepository.pullFromServer(userId)
             }
             Result.success()
         } catch (e: Exception) {

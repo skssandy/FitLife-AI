@@ -25,6 +25,7 @@ data class UserEntity(
     val stressLevel: String?,
     val cycleLength: Int? = null,
     val lastPeriodStart: Long? = null,
+    val supportMode: String? = null,
     val hydrationTargetMl: Int? = null,
     val calorieTarget: Int? = null,
     val proteinTargetG: Int? = null,

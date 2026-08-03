@@ -24,6 +24,7 @@ create table if not exists user_profiles (
   "stressLevel" text,
   "cycleLength" integer,
   "lastPeriodStart" bigint,
+  "supportMode" text,
   "hydrationTargetMl" integer,
   "calorieTarget" integer,
   "proteinTargetG" integer,
@@ -102,6 +103,28 @@ create table if not exists daily_metrics (
 
 create unique index if not exists daily_metrics_userId_date_idx on daily_metrics ("userId", "date");
 
+create table if not exists cycle_entries (
+  "id" bigint primary key,
+  "userId" uuid,
+  "startDate" bigint,
+  "flowLevel" text,
+  "symptomsJson" text,
+  "notes" text,
+  "synced" boolean default false,
+  "createdAt" bigint
+);
+
+create table if not exists symptom_logs (
+  "id" bigint primary key,
+  "userId" uuid,
+  "date" bigint,
+  "symptomsJson" text,
+  "synced" boolean default false,
+  "createdAt" bigint
+);
+
+create unique index if not exists symptom_logs_userId_date_idx on symptom_logs ("userId", "date");
+
 -- PostgREST role privileges
 grant select on table user_profiles to anon;
 grant select, insert, update, delete on table user_profiles to authenticated;
@@ -126,6 +149,14 @@ grant select, insert, update, delete on table water_logs to service_role;
 grant select on table daily_metrics to anon;
 grant select, insert, update, delete on table daily_metrics to authenticated;
 grant select, insert, update, delete on table daily_metrics to service_role;
+
+grant select on table cycle_entries to anon;
+grant select, insert, update, delete on table cycle_entries to authenticated;
+grant select, insert, update, delete on table cycle_entries to service_role;
+
+grant select on table symptom_logs to anon;
+grant select, insert, update, delete on table symptom_logs to authenticated;
+grant select, insert, update, delete on table symptom_logs to service_role;
 
 -- Row Level Security
 alter table user_profiles enable row level security;
@@ -160,6 +191,18 @@ create policy "calories_own" on calorie_entries
 drop policy if exists "blood_own" on blood_reports;
 create policy "blood_own" on blood_reports
   for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+drop policy if exists "cycle_own" on cycle_entries;
+create policy "cycle_own" on cycle_entries
+  for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+alter table cycle_entries enable row level security;
+
+drop policy if exists "symptoms_own" on symptom_logs;
+create policy "symptoms_own" on symptom_logs
+  for all using (auth.uid()::text = "userId"::text) with check (auth.uid()::text = "userId"::text);
+
+alter table symptom_logs enable row level security;
 
 -- Auto-create a profile row whenever a new auth user signs up.
 -- The function MUST live in public and the trigger must call it qualified
