@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,7 +71,12 @@ fun BloodScreen(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
         if (uri != null) {
-            decodeBitmap(context, uri)?.let { viewModel.extractFromPhoto(it) }
+            val bitmap = decodeBitmap(context, uri)
+            if (bitmap != null) {
+                viewModel.extractFromPhoto(bitmap)
+            } else {
+                Toast.makeText(context, "Could not read the selected image", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
