@@ -20,6 +20,7 @@ import javax.inject.Inject
 
 data class ProgramsUiState(
     val programs: List<WorkoutProgramEntity> = emptyList(),
+    val userEquipment: List<String> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -44,8 +45,17 @@ class ProgramsViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val userId = authRepository.getCurrentUserId()
+                val user = authRepository.getUserOnce(userId)
+                val equipment = (user?.equipment ?: "")
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
                 programRepository.getPrograms(userId).collect { programs ->
-                    _uiState.value = _uiState.value.copy(programs = programs, isLoading = false)
+                    _uiState.value = _uiState.value.copy(
+                        programs = programs,
+                        userEquipment = equipment,
+                        isLoading = false
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message)
@@ -53,7 +63,19 @@ class ProgramsViewModel @Inject constructor(
         }
     }
 
-    fun presets(): List<WorkoutProgramTemplate> = ProgramSeedData.templates
+    fun presets(): List<WorkoutProgramTemplate> {
+        val equipment = _uiState.value.userEquipment
+        if (equipment.isEmpty()) return ProgramSeedData.templates
+        val hasGym = equipment.contains("Gym")
+        return ProgramSeedData.templates.filter { template ->
+            template.equipment.all { tag ->
+                hasGym || tag == "Bodyweight" || equipment.contains(tag)
+            }
+        }
+    }
+
+    fun equipmentLabel(template: WorkoutProgramTemplate): String =
+        template.equipment.joinToString(" · ")
 
     fun addPreset(template: WorkoutProgramTemplate) {
         viewModelScope.launch {

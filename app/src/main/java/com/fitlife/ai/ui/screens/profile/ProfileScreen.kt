@@ -1,6 +1,9 @@
 package com.fitlife.ai.ui.screens.profile
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +36,24 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitlife.ai.viewmodel.ProfileViewModel
 
+private val dietOptions = listOf("Vegetarian", "Non-Vegetarian", "Jain", "No preference")
+private val mealCountOptions = listOf("3", "4", "5", "6")
+
+private fun dietLabelFor(dietKey: String?): String = when (dietKey?.trim()?.lowercase()) {
+    "veg", "vegetarian" -> "Vegetarian"
+    "non_veg", "non-veg", "nonveg" -> "Non-Vegetarian"
+    "jain" -> "Jain"
+    else -> "No preference"
+}
+
+private fun dietKeyFor(label: String): String = when (label) {
+    "Vegetarian" -> "veg"
+    "Non-Vegetarian" -> "non_veg"
+    "Jain" -> "jain"
+    else -> "any"
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileScreen(
     onNavigateToSettings: () -> Unit = {},
@@ -44,6 +66,8 @@ fun ProfileScreen(
     var heightCm by remember(user) { mutableStateOf(user?.heightCm?.toString() ?: "") }
     var weightKg by remember(user) { mutableStateOf(user?.weightKg?.toString() ?: "") }
     var fitnessGoal by remember(user) { mutableStateOf(user?.fitnessGoal ?: "") }
+    var dietType by remember(user) { mutableStateOf(dietLabelFor(user?.dietType)) }
+    var mealCount by remember(user) { mutableStateOf(user?.mealCount?.toString() ?: "") }
 
     Column(
         modifier = Modifier
@@ -101,6 +125,34 @@ fun ProfileScreen(
         )
         Spacer(Modifier.height(8.dp))
 
+        Text("Dietary Preference", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        FlowRow {
+            dietOptions.forEach { option ->
+                FilterChip(
+                    selected = dietType == option,
+                    onClick = { dietType = option },
+                    label = { Text(option) },
+                    modifier = Modifier.padding(end = 8.dp, bottom = 4.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text("Meals Per Day", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        FlowRow {
+            mealCountOptions.forEach { option ->
+                FilterChip(
+                    selected = mealCount == option,
+                    onClick = { mealCount = option },
+                    label = { Text(option) },
+                    modifier = Modifier.padding(end = 8.dp, bottom = 4.dp)
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
         uiState.error?.let {
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
@@ -115,7 +167,9 @@ fun ProfileScreen(
                     dateOfBirth = null,
                     gender = null,
                     fitnessGoal = fitnessGoal.ifBlank { null },
-                    activityLevel = null
+                    activityLevel = null,
+                    dietType = dietType.ifBlank { null }?.let { dietKeyFor(it) },
+                    mealCount = mealCount.toIntOrNull()
                 )
             },
             enabled = !uiState.isSaving,

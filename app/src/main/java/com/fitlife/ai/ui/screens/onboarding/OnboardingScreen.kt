@@ -44,8 +44,8 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-private val steps = listOf("Profile", "Goals", "Activity", "Lifestyle", "Summary")
-private val cycleSteps = listOf("Profile", "Goals", "Activity", "Lifestyle", "Cycle", "Summary")
+private val steps = listOf("Profile", "Goals", "Activity", "Lifestyle", "Nutrition", "Summary")
+private val cycleSteps = listOf("Profile", "Goals", "Activity", "Lifestyle", "Nutrition", "Cycle", "Summary")
 private val genders = listOf("Male", "Female", "Other")
 private val goals = listOf("Weight Loss", "Muscle Gain", "Strength", "Endurance", "General Fitness")
 private val frequencies = listOf("Rarely", "1-2x / week", "3-4x / week", "5+ / week")
@@ -54,6 +54,8 @@ private val equipmentOptions = listOf("Gym", "Home", "Bodyweight", "Dumbbells", 
 private val sleepOptions = listOf("Less than 6", "6-7", "7-8", "8+")
 private val stressLevels = listOf("Low", "Moderate", "High")
 private val lifestyleOptions = listOf("None", "Alcohol", "Smoking", "High Sugar", "High Caffeine")
+private val dietOptions = listOf("Vegetarian", "Non-Vegetarian", "Jain", "No preference")
+private val mealCountOptions = listOf("3", "4", "5", "6")
 
 private val dateFormatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
@@ -94,6 +96,8 @@ fun OnboardingScreen(
     }
     var sleep by remember { mutableStateOf(prefill?.sleepHours?.let { sleepLabelFor(it) } ?: "") }
     var stressLevel by remember { mutableStateOf(prefill?.stressLevel ?: "") }
+    var dietType by remember { mutableStateOf(prefill?.dietType?.let { dietLabelFor(it) } ?: "") }
+    var mealCount by remember { mutableStateOf(prefill?.mealCount?.toString() ?: "4") }
     var cycleLength by remember { mutableStateOf(prefill?.cycleLength?.toString() ?: "28") }
     var lastPeriodStart by remember { mutableStateOf(prefill?.lastPeriodStart?.let { millisToDateString(it) } ?: "") }
     var showDatePicker by remember { mutableStateOf(false) }
@@ -167,7 +171,13 @@ fun OnboardingScreen(
                 },
                 onInjuriesChange = { injuries = it }
             )
-            4 -> if (showCycleStep) {
+            4 -> NutritionStep(
+                dietType = dietType,
+                mealCount = mealCount,
+                onDietTypeChange = { dietType = it },
+                onMealCountChange = { mealCount = it }
+            )
+            5 -> if (showCycleStep) {
                 CycleStep(
                     cycleLength = cycleLength,
                     lastPeriodStart = lastPeriodStart,
@@ -194,7 +204,7 @@ fun OnboardingScreen(
                     gender = gender
                 )
             }
-            5 -> SummaryStep(
+            6 -> SummaryStep(
                 targets = viewModel.computeTargets(
                     heightCm = heightCm.toDoubleOrNull(),
                     weightKg = weightKg.toDoubleOrNull(),
@@ -249,6 +259,8 @@ fun OnboardingScreen(
                             stressLevel = stressLevel.ifBlank { null },
                             cycleLength = cycleLength.toIntOrNull(),
                             lastPeriodStart = lastPeriodStart.toMillis(),
+                            dietType = dietType.ifBlank { null }?.let { dietKeyFor(it) },
+                            mealCount = mealCount.toIntOrNull(),
                             onDone = onComplete
                         )
                     },
@@ -483,6 +495,41 @@ private fun LifestyleStep(
 }
 
 @Composable
+private fun NutritionStep(
+    dietType: String,
+    mealCount: String,
+    onDietTypeChange: (String) -> Unit,
+    onMealCountChange: (String) -> Unit
+) {
+    Column {
+        Text(
+            "Tell us how you eat so we can plan meals you'll actually enjoy.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(20.dp))
+
+        Text("Dietary Preference", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        FlowChipsRow(options = dietOptions, selected = dietType, onSelect = onDietTypeChange)
+        Spacer(Modifier.height(20.dp))
+
+        Text("Meals Per Day", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(8.dp))
+        FlowChipsRow(options = mealCountOptions, selected = mealCount, onSelect = onMealCountChange)
+        Spacer(Modifier.height(12.dp))
+        OutlinedTextField(
+            value = mealCount,
+            onValueChange = onMealCountChange,
+            label = { Text("Custom meals per day (3-6)") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
 private fun CycleStep(
     cycleLength: String,
     lastPeriodStart: String,
@@ -640,6 +687,20 @@ private fun sleepLabelFor(hours: Double): String = when {
     hours < 7 -> "6-7"
     hours < 8 -> "7-8"
     else -> "8+"
+}
+
+private fun dietLabelFor(dietKey: String): String = when (dietKey.trim().lowercase()) {
+    "veg", "vegetarian" -> "Vegetarian"
+    "non_veg", "non-veg", "nonveg" -> "Non-Vegetarian"
+    "jain" -> "Jain"
+    else -> "No preference"
+}
+
+private fun dietKeyFor(label: String): String = when (label) {
+    "Vegetarian" -> "veg"
+    "Non-Vegetarian" -> "non_veg"
+    "Jain" -> "jain"
+    else -> "any"
 }
 
 private fun millisToDateString(millis: Long): String = dateFormatter.format(java.util.Date(millis))

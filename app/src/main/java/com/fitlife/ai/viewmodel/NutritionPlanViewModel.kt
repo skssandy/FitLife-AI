@@ -105,7 +105,9 @@ class NutritionPlanViewModel @Inject constructor(
                             hydrationTarget
                         )
                         val weekly = buildWeeklyAdherence(entries, logs, weekStart, targets, hydrationTarget)
-                        val plan = if (targets != null) NutritionPlanGenerator.generatePlan(foods, targets) else emptyList()
+                        val plan = if (targets != null) {
+                            NutritionPlanGenerator.generatePlan(foods, targets, user?.dietType, user?.mealCount)
+                        } else emptyList()
                         _uiState.value = NutritionPlanUiState(
                             targets = targets,
                             hydrationTargetMl = hydrationTarget,

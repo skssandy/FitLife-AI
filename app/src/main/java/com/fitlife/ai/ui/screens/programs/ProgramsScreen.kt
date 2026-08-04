@@ -21,6 +21,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +41,7 @@ import com.fitlife.ai.viewmodel.ProgramsViewModel
 
 @Composable
 fun ProgramsScreen(
+    onBack: () -> Unit = {},
     viewModel: ProgramsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -60,7 +62,16 @@ fun ProgramsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            item { Text("Programs", style = MaterialTheme.typography.headlineMedium) }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Programs", style = MaterialTheme.typography.headlineMedium)
+                    OutlinedButton(onClick = onBack) { Text("Back") }
+                }
+            }
 
             if (uiState.isLoading) {
                 item { CircularProgressIndicator() }
@@ -163,6 +174,14 @@ private fun PresetsDialog(
         title = { Text("Browse Presets") },
         text = {
             Column {
+                if (viewModel.uiState.value.userEquipment.isNotEmpty()) {
+                    Text(
+                        "Showing programs that match your equipment.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                }
                 presets.forEach { preset ->
                     Card(
                         onClick = { onSelect(preset) },
@@ -174,6 +193,11 @@ private fun PresetsDialog(
                                 "${preset.goal} · ${preset.days.size} days/week",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                viewModel.equipmentLabel(preset),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material3.AlertDialog
@@ -76,6 +77,19 @@ fun BloodScreen(
                 viewModel.extractFromPhoto(bitmap)
             } else {
                 Toast.makeText(context, "Could not read the selected image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val pdfLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val bytes = readBytes(context, uri)
+            if (bytes != null && bytes.isNotEmpty()) {
+                viewModel.extractFromPdf(bytes)
+            } else {
+                Toast.makeText(context, "Could not read the selected PDF", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -180,6 +194,16 @@ fun BloodScreen(
                             Text(" Gallery")
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            showSourceDialog = false
+                            pdfLauncher.launch(arrayOf("application/pdf"))
+                        }) {
+                            Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
+                            Text(" PDF")
+                        }
+                    }
                 }
             },
             confirmButton = {},
@@ -202,6 +226,10 @@ private fun decodeBitmap(context: android.content.Context, uri: Uri): Bitmap? {
     return context.contentResolver.openInputStream(uri)?.use { stream ->
         BitmapFactory.decodeStream(stream)
     }
+}
+
+private fun readBytes(context: android.content.Context, uri: Uri): ByteArray? {
+    return context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 }
 
 @Composable

@@ -4,7 +4,7 @@ import com.fitlife.ai.data.local.entity.FoodItemEntity
 
 object FoodSeedData {
 
-    val foods: List<FoodItemEntity> = listOf(
+    private val baseFoods: List<FoodItemEntity> = listOf(
         // Fruits
         FoodItemEntity(name = "Apple", category = "Fruits", servingSize = "1 medium (182g)", calories = 95, proteinG = 0.5, carbsG = 25.0, fatG = 0.3),
         FoodItemEntity(name = "Banana", category = "Fruits", servingSize = "1 medium (118g)", calories = 105, proteinG = 1.3, carbsG = 27.0, fatG = 0.4),
@@ -272,4 +272,125 @@ object FoodSeedData {
         FoodItemEntity(name = "Gyro (chicken)", category = "Sushi & International", servingSize = "1 wrap (300g)", calories = 500, proteinG = 32.0, carbsG = 45.0, fatG = 22.0),
         FoodItemEntity(name = "Shawarma (chicken)", category = "Sushi & International", servingSize = "1 wrap (300g)", calories = 480, proteinG = 30.0, carbsG = 42.0, fatG = 20.0)
     )
+
+    private val indianFoods: List<FoodItemEntity> = listOf(
+        // Indian staples & breads
+        FoodItemEntity(name = "Roti (whole wheat)", category = "Indian Staples", servingSize = "1 medium (40g)", calories = 120, proteinG = 3.7, carbsG = 23.0, fatG = 1.4, dietType = "jain"),
+        FoodItemEntity(name = "Naan", category = "Indian Staples", servingSize = "1 pc (90g)", calories = 262, proteinG = 8.7, carbsG = 45.0, fatG = 5.0, dietType = "veg"),
+        FoodItemEntity(name = "Tandoori Roti", category = "Indian Staples", servingSize = "1 pc (50g)", calories = 130, proteinG = 4.0, carbsG = 25.0, fatG = 1.5, dietType = "jain"),
+        FoodItemEntity(name = "Paratha (aloo)", category = "Indian Staples", servingSize = "1 pc (100g)", calories = 260, proteinG = 5.0, carbsG = 33.0, fatG = 12.0, dietType = "veg"),
+        FoodItemEntity(name = "Paratha (plain)", category = "Indian Staples", servingSize = "1 pc (80g)", calories = 210, proteinG = 4.0, carbsG = 28.0, fatG = 9.0, dietType = "veg"),
+        FoodItemEntity(name = "Bhatura", category = "Indian Staples", servingSize = "1 pc (80g)", calories = 260, proteinG = 5.0, carbsG = 38.0, fatG = 10.0, dietType = "veg"),
+        FoodItemEntity(name = "Puri", category = "Indian Staples", servingSize = "2 pcs (50g)", calories = 150, proteinG = 2.5, carbsG = 18.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Basmati Rice (cooked)", category = "Indian Staples", servingSize = "1 cup (160g)", calories = 205, proteinG = 4.4, carbsG = 45.0, fatG = 0.4, dietType = "jain"),
+        FoodItemEntity(name = "Jeera Rice", category = "Indian Staples", servingSize = "1 cup (180g)", calories = 210, proteinG = 4.0, carbsG = 40.0, fatG = 3.5, dietType = "veg"),
+        FoodItemEntity(name = "Vegetable Pulao", category = "Indian Staples", servingSize = "1 cup (200g)", calories = 230, proteinG = 5.0, carbsG = 38.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Curd Rice", category = "Indian Staples", servingSize = "1 cup (240g)", calories = 220, proteinG = 7.0, carbsG = 35.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Idli", category = "Indian Staples", servingSize = "2 pcs (150g)", calories = 116, proteinG = 3.0, carbsG = 25.0, fatG = 0.5, dietType = "jain"),
+        FoodItemEntity(name = "Dosa (plain)", category = "Indian Staples", servingSize = "1 pc (150g)", calories = 150, proteinG = 3.8, carbsG = 30.0, fatG = 2.5, dietType = "jain"),
+        FoodItemEntity(name = "Masala Dosa", category = "Indian Staples", servingSize = "1 pc (300g)", calories = 300, proteinG = 7.0, carbsG = 45.0, fatG = 10.0, dietType = "veg"),
+        FoodItemEntity(name = "Uttapam", category = "Indian Staples", servingSize = "1 pc (200g)", calories = 230, proteinG = 6.0, carbsG = 38.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Upma (rava)", category = "Indian Staples", servingSize = "1 cup (200g)", calories = 250, proteinG = 5.0, carbsG = 40.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Poha", category = "Indian Staples", servingSize = "1 cup (180g)", calories = 250, proteinG = 4.5, carbsG = 40.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Vada", category = "Indian Staples", servingSize = "1 pc (40g)", calories = 120, proteinG = 3.0, carbsG = 12.0, fatG = 7.0, dietType = "veg"),
+        FoodItemEntity(name = "Sambar", category = "Indian Staples", servingSize = "1 cup (240g)", calories = 120, proteinG = 5.0, carbsG = 18.0, fatG = 3.0, dietType = "veg"),
+        FoodItemEntity(name = "Coconut Chutney", category = "Indian Staples", servingSize = "1 tbsp (20g)", calories = 60, proteinG = 0.8, carbsG = 3.0, fatG = 5.0, dietType = "veg"),
+
+        // Indian dals & curries
+        FoodItemEntity(name = "Dal Tadka", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 200, proteinG = 11.0, carbsG = 25.0, fatG = 5.0, dietType = "veg"),
+        FoodItemEntity(name = "Moong Dal", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 160, proteinG = 10.0, carbsG = 27.0, fatG = 2.0, dietType = "jain"),
+        FoodItemEntity(name = "Dal Makhani", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 300, proteinG = 12.0, carbsG = 30.0, fatG = 14.0, dietType = "veg"),
+        FoodItemEntity(name = "Rajma Masala", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 220, proteinG = 13.0, carbsG = 35.0, fatG = 4.0, dietType = "veg"),
+        FoodItemEntity(name = "Chole (chickpea curry)", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 250, proteinG = 13.0, carbsG = 38.0, fatG = 5.0, dietType = "veg"),
+        FoodItemEntity(name = "Palak Paneer", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 270, proteinG = 13.0, carbsG = 10.0, fatG = 18.0, dietType = "veg"),
+        FoodItemEntity(name = "Matar Paneer", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 300, proteinG = 13.0, carbsG = 16.0, fatG = 20.0, dietType = "veg"),
+        FoodItemEntity(name = "Paneer Bhurji", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 280, proteinG = 16.0, carbsG = 8.0, fatG = 20.0, dietType = "veg"),
+        FoodItemEntity(name = "Aloo Gobi", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 140, proteinG = 3.0, carbsG = 16.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Baingan Bharta", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 150, proteinG = 3.0, carbsG = 14.0, fatG = 9.0, dietType = "veg"),
+        FoodItemEntity(name = "Bhindi Masala", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 130, proteinG = 3.0, carbsG = 12.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Aloo Matar", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 160, proteinG = 4.0, carbsG = 20.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Mix Veg Sabzi", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 140, proteinG = 3.5, carbsG = 15.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Gobi Manchurian", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 200, proteinG = 4.0, carbsG = 24.0, fatG = 10.0, dietType = "veg"),
+        FoodItemEntity(name = "Gatte ki Sabzi", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 220, proteinG = 8.0, carbsG = 24.0, fatG = 10.0, dietType = "veg"),
+
+        // Indian non-veg main dishes
+        FoodItemEntity(name = "Chicken Biryani", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 350, proteinG = 20.0, carbsG = 42.0, fatG = 11.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Mutton Biryani", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 400, proteinG = 22.0, carbsG = 40.0, fatG = 16.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Egg Biryani", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 330, proteinG = 14.0, carbsG = 42.0, fatG = 12.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Butter Chicken", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 350, proteinG = 24.0, carbsG = 12.0, fatG = 22.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Chicken Tikka Masala", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 330, proteinG = 22.0, carbsG = 14.0, fatG = 20.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Chicken Tikka", category = "Indian Non-Veg", servingSize = "4 pcs (120g)", calories = 260, proteinG = 28.0, carbsG = 6.0, fatG = 13.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Tandoori Chicken", category = "Indian Non-Veg", servingSize = "2 pcs (150g)", calories = 290, proteinG = 30.0, carbsG = 3.0, fatG = 17.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Chicken 65", category = "Indian Non-Veg", servingSize = "1 cup (150g)", calories = 340, proteinG = 25.0, carbsG = 15.0, fatG = 20.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Chicken Korma", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 360, proteinG = 20.0, carbsG = 14.0, fatG = 24.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Mutton Curry", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 360, proteinG = 24.0, carbsG = 10.0, fatG = 24.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Keema (mutton)", category = "Indian Non-Veg", servingSize = "1 cup (200g)", calories = 350, proteinG = 22.0, carbsG = 10.0, fatG = 24.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Fish Curry (Indian)", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 250, proteinG = 20.0, carbsG = 10.0, fatG = 14.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Fish Fry", category = "Indian Non-Veg", servingSize = "2 pcs (120g)", calories = 300, proteinG = 22.0, carbsG = 10.0, fatG = 18.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Prawn Curry", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 240, proteinG = 18.0, carbsG = 12.0, fatG = 13.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Egg Curry", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 280, proteinG = 13.0, carbsG = 10.0, fatG = 20.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Chicken Curry (Indian)", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 320, proteinG = 24.0, carbsG = 12.0, fatG = 19.0, dietType = "non_veg"),
+
+        // Indian snacks & chaat
+        FoodItemEntity(name = "Samosa", category = "Indian Snacks", servingSize = "1 pc (70g)", calories = 262, proteinG = 3.8, carbsG = 28.0, fatG = 15.0, dietType = "veg"),
+        FoodItemEntity(name = "Kachori", category = "Indian Snacks", servingSize = "1 pc (60g)", calories = 220, proteinG = 4.0, carbsG = 24.0, fatG = 12.0, dietType = "veg"),
+        FoodItemEntity(name = "Onion Pakora", category = "Indian Snacks", servingSize = "5 pcs (100g)", calories = 250, proteinG = 5.0, carbsG = 22.0, fatG = 15.0, dietType = "veg"),
+        FoodItemEntity(name = "Vada Pav", category = "Indian Snacks", servingSize = "1 pc (120g)", calories = 280, proteinG = 6.0, carbsG = 38.0, fatG = 12.0, dietType = "veg"),
+        FoodItemEntity(name = "Pav Bhaji", category = "Indian Snacks", servingSize = "1 plate (350g)", calories = 350, proteinG = 8.0, carbsG = 45.0, fatG = 15.0, dietType = "veg"),
+        FoodItemEntity(name = "Dahi Papdi Chaat", category = "Indian Snacks", servingSize = "1 bowl (200g)", calories = 250, proteinG = 6.0, carbsG = 34.0, fatG = 10.0, dietType = "veg"),
+        FoodItemEntity(name = "Bhel Puri", category = "Indian Snacks", servingSize = "1 cup (150g)", calories = 180, proteinG = 3.5, carbsG = 28.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Pani Puri", category = "Indian Snacks", servingSize = "6 pcs (120g)", calories = 150, proteinG = 3.0, carbsG = 22.0, fatG = 5.0, dietType = "veg"),
+        FoodItemEntity(name = "Dhokla", category = "Indian Snacks", servingSize = "2 pcs (120g)", calories = 140, proteinG = 5.0, carbsG = 22.0, fatG = 3.0, dietType = "veg"),
+        FoodItemEntity(name = "Murukku", category = "Indian Snacks", servingSize = "30g", calories = 150, proteinG = 3.0, carbsG = 18.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Banana Chips", category = "Indian Snacks", servingSize = "30g", calories = 170, proteinG = 1.0, carbsG = 15.0, fatG = 12.0, dietType = "veg"),
+        FoodItemEntity(name = "Namkeen (mixture)", category = "Indian Snacks", servingSize = "30g", calories = 160, proteinG = 3.0, carbsG = 16.0, fatG = 9.0, dietType = "veg"),
+
+        // Indian sweets
+        FoodItemEntity(name = "Gulab Jamun", category = "Indian Sweets", servingSize = "1 pc (40g)", calories = 150, proteinG = 2.0, carbsG = 22.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Jalebi", category = "Indian Sweets", servingSize = "1 pc (40g)", calories = 150, proteinG = 1.5, carbsG = 24.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Rasgulla", category = "Indian Sweets", servingSize = "1 pc (35g)", calories = 120, proteinG = 3.0, carbsG = 25.0, fatG = 1.0, dietType = "veg"),
+        FoodItemEntity(name = "Besan Ladoo", category = "Indian Sweets", servingSize = "1 pc (35g)", calories = 180, proteinG = 4.0, carbsG = 20.0, fatG = 10.0, dietType = "veg"),
+        FoodItemEntity(name = "Kaju Katli", category = "Indian Sweets", servingSize = "1 pc (25g)", calories = 140, proteinG = 2.5, carbsG = 13.0, fatG = 9.0, dietType = "veg"),
+        FoodItemEntity(name = "Kheer", category = "Indian Sweets", servingSize = "1 cup (240g)", calories = 250, proteinG = 7.0, carbsG = 36.0, fatG = 8.0, dietType = "jain"),
+        FoodItemEntity(name = "Gajar Halwa", category = "Indian Sweets", servingSize = "1 cup (200g)", calories = 300, proteinG = 5.0, carbsG = 40.0, fatG = 14.0, dietType = "veg"),
+        FoodItemEntity(name = "Barfi (milk)", category = "Indian Sweets", servingSize = "1 pc (30g)", calories = 140, proteinG = 3.0, carbsG = 18.0, fatG = 6.0, dietType = "veg"),
+
+        // Jain-safe specials
+        FoodItemEntity(name = "Sabudana Khichdi", category = "Jain Specials", servingSize = "1 cup (200g)", calories = 250, proteinG = 3.0, carbsG = 44.0, fatG = 7.0, dietType = "jain"),
+        FoodItemEntity(name = "Sabudana Vada", category = "Jain Specials", servingSize = "2 pcs (90g)", calories = 220, proteinG = 3.0, carbsG = 30.0, fatG = 10.0, dietType = "jain"),
+        FoodItemEntity(name = "Kuttu Paratha", category = "Jain Specials", servingSize = "1 pc (60g)", calories = 170, proteinG = 4.0, carbsG = 28.0, fatG = 5.0, dietType = "jain"),
+        FoodItemEntity(name = "Rajgira Ladoo", category = "Jain Specials", servingSize = "1 pc (30g)", calories = 150, proteinG = 3.0, carbsG = 20.0, fatG = 6.0, dietType = "jain"),
+        FoodItemEntity(name = "Roasted Papad", category = "Jain Specials", servingSize = "1 pc (10g)", calories = 40, proteinG = 2.0, carbsG = 4.0, fatG = 2.0, dietType = "jain"),
+        FoodItemEntity(name = "Peanut Chaat", category = "Jain Specials", servingSize = "1 cup (150g)", calories = 220, proteinG = 9.0, carbsG = 18.0, fatG = 13.0, dietType = "jain"),
+
+        // Indian beverages
+        FoodItemEntity(name = "Masala Chai", category = "Indian Beverages", servingSize = "1 cup (240ml)", calories = 60, proteinG = 2.0, carbsG = 8.0, fatG = 2.0, dietType = "veg"),
+        FoodItemEntity(name = "Lassi (sweet)", category = "Indian Beverages", servingSize = "1 cup (240ml)", calories = 180, proteinG = 6.0, carbsG = 30.0, fatG = 4.0, dietType = "veg"),
+        FoodItemEntity(name = "Buttermilk (chaas)", category = "Indian Beverages", servingSize = "1 cup (240ml)", calories = 40, proteinG = 3.0, carbsG = 5.0, fatG = 1.0, dietType = "veg"),
+        FoodItemEntity(name = "Nimbu Pani", category = "Indian Beverages", servingSize = "1 glass (240ml)", calories = 50, proteinG = 0.3, carbsG = 13.0, fatG = 0.1, dietType = "jain"),
+        FoodItemEntity(name = "Aam Panna", category = "Indian Beverages", servingSize = "1 glass (240ml)", calories = 90, proteinG = 0.5, carbsG = 22.0, fatG = 0.2, dietType = "veg")
+    )
+
+    private val eggFoods = setOf("Egg", "Egg White")
+    private val nonVegOverrides = setOf(
+        "Cheeseburger", "Hamburger", "Chicken Sandwich", "Pepperoni Pizza Slice",
+        "Hot Dog", "Burrito (chicken)", "Taco (beef)", "Fish Sandwich", "Chicken Nuggets",
+        "Sub Sandwich (turkey)", "Chicken Wings (buffalo)", "Breakfast Burrito",
+        "Caesar Salad", "Chicken Soup", "Chili (beef)", "Spaghetti Bolognese",
+        "Chicken Curry", "Beef Stir-Fry", "Fried Rice (chicken)", "Lasagna", "Meatloaf",
+        "Tuna Salad", "Chicken Salad", "Omelet (cheese)", "Scrambled Eggs",
+        "French Toast", "Ramen (instant)", "Canned Tuna Salad Sandwich",
+        "Sushi Roll (spicy tuna)", "Sashimi (salmon)", "Gyro (chicken)",
+        "Shawarma (chicken)", "Chicken Soup"
+    )
+
+    val foods: List<FoodItemEntity> = (baseFoods.map { it.copy(dietType = classify(it)) } + indianFoods)
+        .sortedBy { it.name.lowercase() }
+
+    private fun classify(food: FoodItemEntity): String = when {
+        food.name in eggFoods -> "non_veg"
+        food.category == "Meat & Poultry" || food.category == "Fish & Seafood" -> "non_veg"
+        food.name in nonVegOverrides -> "non_veg"
+        else -> "veg"
+    }
 }

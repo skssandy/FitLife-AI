@@ -163,15 +163,15 @@ fun AppNavHost() {
             composable(Routes.Workout.route) {
                 WorkoutScreen(onOpenPrograms = { navController.navigate(Routes.Programs.route) })
             }
-            composable(Routes.Programs.route) { ProgramsScreen() }
+            composable(Routes.Programs.route) { ProgramsScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.AIChat.route) { AIChatScreen() }
             composable(Routes.CalorieTracker.route) { CalorieTrackerScreen() }
             composable(Routes.NutritionPlan.route) { NutritionPlanScreen(onBack = { navController.popBackStack() }) }
-            composable(Routes.Blood.route) { BloodScreen() }
+            composable(Routes.Blood.route) { BloodScreen(onBack = { navController.popBackStack() }) }
             composable(Routes.Health.route) { HealthScreen(onBack = { navController.popBackStack() }) }
-            composable(Routes.Cycle.route) { CycleScreen() }
-            composable(Routes.Water.route) { WaterScreen() }
-            composable(Routes.Settings.route) { SettingsScreen(viewModel = authViewModel) }
+            composable(Routes.Cycle.route) { CycleScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.Water.route) { WaterScreen(onBack = { navController.popBackStack() }) }
+            composable(Routes.Settings.route) { SettingsScreen(onBack = { navController.popBackStack() }, viewModel = authViewModel) }
         }
     }
 }

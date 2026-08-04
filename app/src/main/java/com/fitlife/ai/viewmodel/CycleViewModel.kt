@@ -171,6 +171,17 @@ class CycleViewModel @Inject constructor(
         }
     }
 
+    fun setLastPeriodStart(dateMillis: Long) {
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.user ?: return@launch
+                authRepository.saveProfile(user.copy(lastPeriodStart = startOfDay(dateMillis)))
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
     private fun encodeSymptoms(symptoms: List<String>): String =
         symptoms.joinToString(prefix = "[", postfix = "]", separator = ",") { "\"$it\"" }
 

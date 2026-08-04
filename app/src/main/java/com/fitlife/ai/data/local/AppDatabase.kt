@@ -39,7 +39,7 @@ import com.fitlife.ai.data.local.entity.WorkoutProgramEntity
         CycleEntryEntity::class,
         SymptomLogEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

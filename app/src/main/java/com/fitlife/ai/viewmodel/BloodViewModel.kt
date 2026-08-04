@@ -53,6 +53,7 @@ class BloodViewModel @Inject constructor(
     companion object {
         private const val TAG = "BloodViewModel"
         private const val GEMINI_MODEL = "gemini-3.5-flash"
+        private const val MAX_UPLOAD_BYTES = 15 * 1024 * 1024
         private const val BLOOD_ANALYZER_SYSTEM_PROMPT =
             "You are FitLife AI's medical data analyst. Interpret blood test results and provide actionable health insights. " +
             "Extract and validate all numerical markers, classify each against age/gender reference ranges, identify deficiencies, " +
@@ -89,7 +90,12 @@ class BloodViewModel @Inject constructor(
                 return@launch
             }
             try {
-                val result = withContext(Dispatchers.IO) { callExtractionApi(apiKey, bitmap) }
+                val resized = resizeForUpload(bitmap)
+                val baos = ByteArrayOutputStream()
+                resized.compress(Bitmap.CompressFormat.JPEG, 85, baos)
+                val result = withContext(Dispatchers.IO) {
+                    callExtractionApi(apiKey, "image/jpeg", baos.toByteArray())
+                }
                 _uiState.value = _uiState.value.copy(
                     isExtracting = false,
                     draftMarkers = result.first,
@@ -97,6 +103,37 @@ class BloodViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Extraction failed", e)
+                _uiState.value = _uiState.value.copy(isExtracting = false, error = "Could not extract report: ${e.message}")
+            }
+        }
+    }
+
+    fun extractFromPdf(pdfBytes: ByteArray) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isExtracting = true, error = null)
+            val apiKey = BuildConfig.GEMINI_API_KEY
+            if (apiKey.isBlank()) {
+                _uiState.value = _uiState.value.copy(isExtracting = false, error = "Gemini API key not configured")
+                return@launch
+            }
+            if (pdfBytes.size > MAX_UPLOAD_BYTES) {
+                _uiState.value = _uiState.value.copy(
+                    isExtracting = false,
+                    error = "PDF is too large (max ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB). Please upload a smaller file."
+                )
+                return@launch
+            }
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    callExtractionApi(apiKey, "application/pdf", pdfBytes)
+                }
+                _uiState.value = _uiState.value.copy(
+                    isExtracting = false,
+                    draftMarkers = result.first,
+                    draftRawText = result.second
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "PDF extraction failed", e)
                 _uiState.value = _uiState.value.copy(isExtracting = false, error = "Could not extract report: ${e.message}")
             }
         }
@@ -177,13 +214,10 @@ class BloodViewModel @Inject constructor(
         }
     }
 
-    private fun callExtractionApi(apiKey: String, bitmap: Bitmap): Pair<List<BloodMarkerDto>, String> {
-        val resized = resizeForUpload(bitmap)
-        val baos = ByteArrayOutputStream()
-        resized.compress(Bitmap.CompressFormat.JPEG, 85, baos)
-        val base64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+    private fun callExtractionApi(apiKey: String, mimeType: String, data: ByteArray): Pair<List<BloodMarkerDto>, String> {
+        val base64 = Base64.encodeToString(data, Base64.NO_WRAP)
 
-        val prompt = "Analyze this photo of a laboratory blood test report. " +
+        val prompt = "Analyze this ${if (mimeType == "application/pdf") "PDF of a" else "photo of a"} laboratory blood test report. " +
             "Extract every marker visible: name, value, unit, and reference range low and high. " +
             "Return STRICT JSON only, no markdown, in this exact shape: " +
             "{\"markers\":[{\"name\":\"...\",\"value\":<number or null>,\"unit\":\"...\",\"refLow\":<number or null>,\"refHigh\":<number or null>}],\"rawText\":\"exact text on the report\"}"
@@ -194,7 +228,7 @@ class BloodViewModel @Inject constructor(
                     put("parts", JSONArray().apply {
                         put(JSONObject().apply {
                             put("inlineData", JSONObject().apply {
-                                put("mimeType", "image/jpeg")
+                                put("mimeType", mimeType)
                                 put("data", base64)
                             })
                         })

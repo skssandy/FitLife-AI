@@ -73,8 +73,15 @@ class AuthRepository @Inject constructor(
             val profile = supabase.from("user_profiles")
                 .select { filter { eq("id", userId) } }
                 .decodeSingleOrNull<UserEntity>()
-            if (profile != null) userDao.upsert(profile)
-            profile
+            if (profile != null) {
+                val local = userDao.getUserOnce(userId)
+                val merged = if (local != null) profile.copy(
+                    dietType = profile.dietType ?: local.dietType,
+                    mealCount = profile.mealCount ?: local.mealCount
+                ) else profile
+                userDao.upsert(merged)
+                merged
+            } else profile
         } catch (e: Exception) { null }
     }
 

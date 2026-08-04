@@ -20,6 +20,7 @@ data class WorkoutProgramTemplate(
     val name: String,
     val description: String,
     val goal: String,
+    val equipment: List<String> = emptyList(),
     val days: List<ProgramDay>
 )
 
@@ -29,6 +30,7 @@ object ProgramSeedData {
             name = "Beginner Full Body",
             description = "3 days a week, full body each session. Perfect for building a base.",
             goal = "General Fitness",
+            equipment = listOf("Gym", "Dumbbells", "Bodyweight"),
             days = listOf(
                 ProgramDay(
                     name = "Day 1",
@@ -64,6 +66,7 @@ object ProgramSeedData {
             name = "Push Pull Legs",
             description = "The classic 6-day split for strength and hypertrophy.",
             goal = "Muscle Gain",
+            equipment = listOf("Gym", "Barbell"),
             days = listOf(
                 ProgramDay(
                     name = "Day 1 - Push",
@@ -131,6 +134,7 @@ object ProgramSeedData {
             name = "Upper Lower Split",
             description = "4 days a week, alternating upper and lower body.",
             goal = "Strength",
+            equipment = listOf("Gym", "Barbell"),
             days = listOf(
                 ProgramDay(
                     name = "Day 1 - Upper",
@@ -168,6 +172,92 @@ object ProgramSeedData {
                         ProgramExercise("Bulgarian Split Squat", 3, "10/leg"),
                         ProgramExercise("Hip Thrust", 3, "10-12"),
                         ProgramExercise("Leg Curl", 3, "10-12")
+                    )
+                )
+            )
+        ),
+        WorkoutProgramTemplate(
+            name = "Home Bodyweight Burn",
+            description = "No equipment needed. Builds endurance and strength anywhere.",
+            goal = "General Fitness",
+            equipment = listOf("Home", "Bodyweight", "Resistance Bands"),
+            days = listOf(
+                ProgramDay(
+                    name = "Day 1",
+                    exercises = listOf(
+                        ProgramExercise("Squat Jumps", 3, "12-15"),
+                        ProgramExercise("Push Ups", 3, "8-15"),
+                        ProgramExercise("Walking Lunges", 3, "12/leg"),
+                        ProgramExercise("Plank", 3, "30-45 sec"),
+                        ProgramExercise("Band Rows", 3, "12-15")
+                    )
+                ),
+                ProgramDay(
+                    name = "Day 2",
+                    exercises = listOf(
+                        ProgramExercise("Glute Bridges", 3, "15"),
+                        ProgramExercise("Incline Push Ups", 3, "10-15"),
+                        ProgramExercise("Mountain Climbers", 3, "30 sec"),
+                        ProgramExercise("Side Plank", 3, "20-30 sec/side"),
+                        ProgramExercise("Band Pull Aparts", 3, "15")
+                    )
+                ),
+                ProgramDay(
+                    name = "Day 3",
+                    exercises = listOf(
+                        ProgramExercise("Burpees", 3, "10-12"),
+                        ProgramExercise("Diamond Push Ups", 3, "6-10"),
+                        ProgramExercise("Bulgarian Split Squat", 3, "10/leg"),
+                        ProgramExercise("Superman Hold", 3, "20-30 sec"),
+                        ProgramExercise("Band Bicep Curls", 3, "12-15")
+                    )
+                )
+            )
+        ),
+        WorkoutProgramTemplate(
+            name = "Dumbbell Home Split",
+            description = "A dumbbell-only split for strength at home.",
+            goal = "Muscle Gain",
+            equipment = listOf("Home", "Dumbbells", "Bodyweight"),
+            days = listOf(
+                ProgramDay(
+                    name = "Day 1 - Upper",
+                    exercises = listOf(
+                        ProgramExercise("Dumbbell Bench Press", 4, "8-10"),
+                        ProgramExercise("One Arm Dumbbell Row", 4, "8-10"),
+                        ProgramExercise("Dumbbell Overhead Press", 3, "8-10"),
+                        ProgramExercise("Dumbbell Curls", 3, "10-12"),
+                        ProgramExercise("Dumbbell Shrugs", 3, "12-15")
+                    )
+                ),
+                ProgramDay(
+                    name = "Day 2 - Lower",
+                    exercises = listOf(
+                        ProgramExercise("Goblet Squat", 4, "10-12"),
+                        ProgramExercise("Dumbbell Romanian Deadlift", 3, "10-12"),
+                        ProgramExercise("Dumbbell Lunges", 3, "12/leg"),
+                        ProgramExercise("Calf Raises", 4, "15-20"),
+                        ProgramExercise("Plank", 3, "30-45 sec")
+                    )
+                ),
+                ProgramDay(
+                    name = "Day 3 - Upper",
+                    exercises = listOf(
+                        ProgramExercise("Dumbbell Floor Press", 4, "10-12"),
+                        ProgramExercise("Bent Over Rows", 4, "8-10"),
+                        ProgramExercise("Dumbbell Lateral Raises", 3, "12-15"),
+                        ProgramExercise("Tricep Overhead Extension", 3, "10-12"),
+                        ProgramExercise("Push Ups", 3, "8-15")
+                    )
+                ),
+                ProgramDay(
+                    name = "Day 4 - Lower",
+                    exercises = listOf(
+                        ProgramExercise("Bulgarian Split Squat", 4, "10/leg"),
+                        ProgramExercise("Dumbbell Deadlift", 3, "10-12"),
+                        ProgramExercise("Step Ups", 3, "12/leg"),
+                        ProgramExercise("Dumbbell Glute Bridge", 3, "12-15"),
+                        ProgramExercise("Side Plank", 3, "20-30 sec/side")
                     )
                 )
             )

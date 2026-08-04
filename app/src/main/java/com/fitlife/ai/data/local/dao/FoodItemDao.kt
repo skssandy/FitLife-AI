@@ -24,6 +24,9 @@ interface FoodItemDao {
     @Query("SELECT COUNT(*) FROM food_items")
     suspend fun count(): Int
 
+    @Query("SELECT name FROM food_items")
+    suspend fun findNames(): List<String>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(items: List<FoodItemEntity>)
 }

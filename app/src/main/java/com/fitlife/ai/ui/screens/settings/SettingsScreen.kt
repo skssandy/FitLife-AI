@@ -41,6 +41,7 @@ private const val KEY_REMINDERS = "daily_reminders_enabled"
 
 @Composable
 fun SettingsScreen(
+    onBack: () -> Unit = {},
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -61,7 +62,14 @@ fun SettingsScreen(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        Text("Settings", style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Settings", style = MaterialTheme.typography.headlineMedium)
+            androidx.compose.material3.OutlinedButton(onClick = onBack) { Text("Back") }
+        }
         Spacer(Modifier.height(24.dp))
 
         Row(

@@ -154,7 +154,9 @@ class CalorieTrackerViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(searchResults = emptyList())
                 return@launch
             }
-            foodRepository.search(query).collect { results ->
+            val dietType = authRepository.getCurrentUserId()
+                .let { authRepository.getUserOnce(it) }?.dietType
+            foodRepository.search(query, dietType).collect { results ->
                 _uiState.value = _uiState.value.copy(searchResults = results)
             }
         }

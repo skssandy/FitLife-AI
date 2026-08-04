@@ -71,6 +71,8 @@ class OnboardingViewModel @Inject constructor(
         stressLevel: String? = null,
         cycleLength: Int? = null,
         lastPeriodStart: Long? = null,
+        dietType: String? = null,
+        mealCount: Int? = null,
         onDone: () -> Unit = {}
     ) {
         viewModelScope.launch {
@@ -97,7 +99,9 @@ class OnboardingViewModel @Inject constructor(
                         sleepHours = sleepHours,
                         stressLevel = stressLevel,
                         cycleLength = cycleLength,
-                        lastPeriodStart = lastPeriodStart
+                        lastPeriodStart = lastPeriodStart,
+                        dietType = dietType,
+                        mealCount = mealCount
                     )
                 )
                 _uiState.value = _uiState.value.copy(isSaving = false)

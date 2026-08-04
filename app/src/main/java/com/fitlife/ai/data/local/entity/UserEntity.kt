@@ -27,6 +27,8 @@ data class UserEntity(
     val lastPeriodStart: Long? = null,
     val supportMode: String? = null,
     val hydrationTargetMl: Int? = null,
+    val dietType: String? = null,
+    val mealCount: Int? = null,
     val calorieTarget: Int? = null,
     val proteinTargetG: Int? = null,
     val carbsTargetG: Int? = null,

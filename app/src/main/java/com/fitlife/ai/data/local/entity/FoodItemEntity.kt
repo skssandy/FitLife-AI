@@ -16,5 +16,6 @@ data class FoodItemEntity(
     val carbsG: Double,
     val fatG: Double,
     val barcode: String? = null,
-    val source: String = "common"
+    val source: String = "common",
+    val dietType: String = "any"
 )
