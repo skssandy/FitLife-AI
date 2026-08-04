@@ -29,4 +29,7 @@ interface FoodItemDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertAll(items: List<FoodItemEntity>)
+
+    @Query("UPDATE food_items SET dietType = :dietType WHERE name = :name")
+    suspend fun updateDietType(name: String, dietType: String)
 }

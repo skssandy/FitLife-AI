@@ -23,6 +23,9 @@ class FoodRepository @Inject constructor(
         if (missing.isNotEmpty()) {
             foodItemDao.insertAll(missing)
         }
+        FoodSeedData.foods.forEach { food ->
+            foodItemDao.updateDietType(food.name, food.dietType)
+        }
     }
 
     fun search(query: String, dietType: String?): Flow<List<FoodItemEntity>> =
