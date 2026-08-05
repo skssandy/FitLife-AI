@@ -76,8 +76,30 @@ class AuthRepository @Inject constructor(
             if (profile != null) {
                 val local = userDao.getUserOnce(userId)
                 val merged = if (local != null) profile.copy(
+                    displayName = profile.displayName ?: local.displayName,
+                    photoUrl = profile.photoUrl ?: local.photoUrl,
+                    heightCm = profile.heightCm ?: local.heightCm,
+                    weightKg = profile.weightKg ?: local.weightKg,
+                    dateOfBirth = profile.dateOfBirth ?: local.dateOfBirth,
+                    gender = profile.gender ?: local.gender,
+                    fitnessGoal = profile.fitnessGoal ?: local.fitnessGoal,
+                    activityLevel = profile.activityLevel ?: local.activityLevel,
+                    workoutFrequency = profile.workoutFrequency ?: local.workoutFrequency,
+                    equipment = profile.equipment ?: local.equipment,
+                    injuries = profile.injuries ?: local.injuries,
+                    lifestyle = profile.lifestyle ?: local.lifestyle,
+                    sleepHours = profile.sleepHours ?: local.sleepHours,
+                    stressLevel = profile.stressLevel ?: local.stressLevel,
+                    cycleLength = profile.cycleLength ?: local.cycleLength,
+                    lastPeriodStart = profile.lastPeriodStart ?: local.lastPeriodStart,
+                    supportMode = profile.supportMode ?: local.supportMode,
+                    hydrationTargetMl = profile.hydrationTargetMl ?: local.hydrationTargetMl,
                     dietType = profile.dietType ?: local.dietType,
-                    mealCount = profile.mealCount ?: local.mealCount
+                    mealCount = profile.mealCount ?: local.mealCount,
+                    calorieTarget = profile.calorieTarget ?: local.calorieTarget,
+                    proteinTargetG = profile.proteinTargetG ?: local.proteinTargetG,
+                    carbsTargetG = profile.carbsTargetG ?: local.carbsTargetG,
+                    fatTargetG = profile.fatTargetG ?: local.fatTargetG
                 ) else profile
                 userDao.upsert(merged)
                 merged
