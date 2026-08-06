@@ -15,21 +15,32 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -38,10 +49,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fitlife.ai.data.MealPlan
+import com.fitlife.ai.util.FoodDiet
 import com.fitlife.ai.viewmodel.NutritionPlanUiState
 import com.fitlife.ai.viewmodel.NutritionPlanViewModel
 
@@ -51,6 +64,7 @@ fun NutritionPlanScreen(
     viewModel: NutritionPlanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showAddDish by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -103,6 +117,13 @@ fun NutritionPlanScreen(
                         Text("Complete Profile")
                     }
                 }
+            }
+        }
+
+        item {
+            OutlinedButton(onClick = { showAddDish = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                Text(" Add custom dish to your plan")
             }
         }
 
@@ -192,6 +213,120 @@ fun NutritionPlanScreen(
             }
         }
     }
+
+    if (showAddDish) {
+        AddDishDialog(
+            onDismiss = { showAddDish = false },
+            onAdd = { name, category, serving, calories, protein, carbs, fat, dietLabel ->
+                viewModel.addCustomDish(name, category, serving, calories, protein, carbs, fat, dietLabel)
+                showAddDish = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun AddDishDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String, String, Int, Double, Double, Double, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("Indian Staples") }
+    var serving by remember { mutableStateOf("") }
+    var calories by remember { mutableStateOf("") }
+    var protein by remember { mutableStateOf("") }
+    var carbs by remember { mutableStateOf("") }
+    var fat by remember { mutableStateOf("") }
+    var dietLabel by remember { mutableStateOf(FoodDiet.options.first()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add custom dish") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "Missing a dish or menu item? Add it here and it will be suggested in your meal plan.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = name, onValueChange = { name = it },
+                    label = { Text("Dish name") }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = serving, onValueChange = { serving = it },
+                        label = { Text("Serving") }, placeholder = { Text("e.g. 1 cup") },
+                        singleLine = true, modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = calories, onValueChange = { calories = it },
+                        label = { Text("Calories") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true, modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = protein, onValueChange = { protein = it },
+                        label = { Text("Protein (g)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true, modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = carbs, onValueChange = { carbs = it },
+                        label = { Text("Carbs (g)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true, modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = fat, onValueChange = { fat = it },
+                        label = { Text("Fat (g)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true, modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = category, onValueChange = { category = it },
+                        label = { Text("Category") },
+                        singleLine = true, modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Text("Diet", style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FoodDiet.options.forEach { option ->
+                        FilterChip(
+                            selected = dietLabel == option,
+                            onClick = { dietLabel = option },
+                            label = { Text(option) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val c = calories.toIntOrNull() ?: return@TextButton
+                    if (name.isBlank()) return@TextButton
+                    onAdd(
+                        name, category, serving,
+                        c, protein.toDoubleOrNull() ?: 0.0, carbs.toDoubleOrNull() ?: 0.0,
+                        fat.toDoubleOrNull() ?: 0.0, dietLabel
+                    )
+                },
+                enabled = name.isNotBlank() && calories.toIntOrNull() != null
+            ) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

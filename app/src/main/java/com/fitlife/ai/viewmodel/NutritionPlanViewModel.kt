@@ -130,8 +130,39 @@ class NutritionPlanViewModel @Inject constructor(
         }
     }
 
-    fun recalculateTargets() {
+    fun addCustomDish(
+        name: String,
+        category: String,
+        servingSize: String,
+        calories: Int,
+        proteinG: Double,
+        carbsG: Double,
+        fatG: Double,
+        dietLabel: String
+    ) {
         viewModelScope.launch {
+            try {
+                foodRepository.addCustomFood(
+                    com.fitlife.ai.data.local.entity.FoodItemEntity(
+                        name = name,
+                        category = category.ifBlank { "Indian Staples" },
+                        servingSize = servingSize.ifBlank { "1 serving" },
+                        calories = calories,
+                        proteinG = proteinG,
+                        carbsG = carbsG,
+                        fatG = fatG,
+                        source = "custom",
+                        dietType = com.fitlife.ai.util.FoodDiet.keyForLabel(dietLabel)
+                    )
+                )
+                load()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    fun recalculateTargets() {        viewModelScope.launch {
             try {
                 val userId = authRepository.getCurrentUserId()
                 val user = authRepository.getUserOnce(userId) ?: return@launch

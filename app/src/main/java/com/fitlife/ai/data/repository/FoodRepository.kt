@@ -35,5 +35,9 @@ class FoodRepository @Inject constructor(
 
     suspend fun allOnce(): List<FoodItemEntity> = foodItemDao.getAllOnce()
 
+    suspend fun addCustomFood(item: FoodItemEntity) {
+        foodItemDao.insert(item)
+    }
+
     suspend fun findByBarcode(barcode: String): FoodItemEntity? = foodItemDao.findByBarcode(barcode)
 }
