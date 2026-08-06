@@ -92,10 +92,17 @@ data class NutritionAdjustment(
 
 object CycleCalculator {
 
+    /**
+     * 1-based cycle day (1 = first day of the period). Returns 0 when the
+     * period anchor is missing or the anchor is in the future (not started yet).
+     */
     fun cycleDay(todayMillis: Long, lastPeriodStartMillis: Long, cycleLengthDays: Int): Int {
         if (lastPeriodStartMillis <= 0) return 0
-        val days = ((todayMillis - lastPeriodStartMillis) / DAY_MILLIS).toInt()
-        return ((days % cycleLengthDays) + 1).coerceAtLeast(1)
+        val anchor = startOfDay(lastPeriodStartMillis)
+        if (todayMillis < anchor) return 0
+        val days = ((todayMillis - anchor) / DAY_MILLIS).toInt()
+        val cycleLength = cycleLengthDays.coerceAtLeast(21)
+        return (days % cycleLength) + 1
     }
 
     fun phaseForDay(day: Int): CyclePhase = when (day) {
@@ -105,9 +112,48 @@ object CycleCalculator {
         else -> CyclePhase.LUTEAL
     }
 
+    /** Most recent predicted period start on or before [dateMillis], or -1 if the anchor is after it. */
+    fun periodStartForDate(dateMillis: Long, lastPeriodStartMillis: Long, cycleLengthDays: Int): Long {
+        val anchor = startOfDay(lastPeriodStartMillis)
+        if (dateMillis < anchor) return -1L
+        val cycleLength = cycleLengthDays.coerceAtLeast(21)
+        val days = ((dateMillis - anchor) / DAY_MILLIS).toInt()
+        val offset = (days / cycleLength) * cycleLength
+        return anchor + offset * DAY_MILLIS
+    }
+
+    /** 1..periodLength if [dateMillis] falls inside a predicted bleeding window, otherwise 0. */
+    fun bleedingDay(dateMillis: Long, lastPeriodStartMillis: Long, cycleLengthDays: Int, periodLengthDays: Int): Int {
+        if (lastPeriodStartMillis <= 0) return 0
+        val start = periodStartForDate(dateMillis, lastPeriodStartMillis, cycleLengthDays)
+        if (start < 0) return 0
+        val periodLength = periodLengthDays.coerceIn(1, 14)
+        val dayIndex = ((dateMillis - start) / DAY_MILLIS).toInt()
+        return if (dayIndex in 0 until periodLength) dayIndex + 1 else 0
+    }
+
+    /** Expected period start for the window that should be happening right now (or the nearest future one). */
+    fun currentExpectedStart(todayMillis: Long, lastPeriodStartMillis: Long, cycleLengthDays: Int): Long {
+        val anchor = startOfDay(lastPeriodStartMillis)
+        if (todayMillis < anchor) return anchor
+        return periodStartForDate(todayMillis, lastPeriodStartMillis, cycleLengthDays)
+    }
+
+    /** Whole days a period is late; 0 if today is still inside the expected bleeding window. */
+    fun daysLate(todayMillis: Long, lastPeriodStartMillis: Long, cycleLengthDays: Int, periodLengthDays: Int): Int {
+        if (lastPeriodStartMillis <= 0) return 0
+        val start = currentExpectedStart(todayMillis, lastPeriodStartMillis, cycleLengthDays)
+        val periodLength = periodLengthDays.coerceIn(1, 14)
+        val windowEnd = start + (periodLength - 1) * DAY_MILLIS
+        if (todayMillis <= windowEnd) return 0
+        return (((todayMillis - windowEnd) / DAY_MILLIS).toInt()).coerceAtLeast(1)
+    }
+
     fun nextPeriodStartMillis(lastPeriodStartMillis: Long, cycleLengthDays: Int, todayMillis: Long): Long {
         val day = cycleDay(todayMillis, lastPeriodStartMillis, cycleLengthDays)
-        val daysUntilNext = cycleLengthDays - day + 1
+        if (day <= 0) return startOfDay(lastPeriodStartMillis)
+        val cycleLength = cycleLengthDays.coerceAtLeast(21)
+        val daysUntilNext = cycleLength - day + 1
         return addDays(todayMillis, daysUntilNext)
     }
 
@@ -154,6 +200,16 @@ object CycleCalculator {
         val cal = Calendar.getInstance()
         cal.timeInMillis = millis
         cal.add(Calendar.DAY_OF_YEAR, days)
+        return cal.timeInMillis
+    }
+
+    private fun startOfDay(millis: Long): Long {
+        val cal = Calendar.getInstance()
+        cal.timeInMillis = millis
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
         return cal.timeInMillis
     }
 

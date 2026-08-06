@@ -21,7 +21,13 @@ data class PhaseSnapshot(
     val phase: CyclePhase,
     val day: Int,
     val cycleLength: Int,
+    val periodLengthDays: Int,
+    val lastPeriodStartMillis: Long,
+    val confirmedBleedingDay: Int,
+    val expectedBleedingDay: Int,
+    val lateByDays: Int,
     val nextPeriodMillis: Long?,
+    val currentExpectedStartMillis: Long?,
     val fertileStartMillis: Long?,
     val fertileEndMillis: Long?
 )
@@ -85,42 +91,88 @@ class CycleViewModel @Inject constructor(
         if (lastPeriod <= 0L) return null
         val cycleLength = (user.cycleLength ?: 28).coerceAtLeast(21)
         val today = System.currentTimeMillis()
+        val periodLength = lastDurationDays()
         val day = CycleCalculator.cycleDay(today, lastPeriod, cycleLength)
-        val phase = CycleCalculator.phaseForDay(day)
+        val confirmedBleedingDay = confirmedBleedingDay(today, periodLength)
+        val expectedBleedingDay = CycleCalculator.bleedingDay(today, lastPeriod, cycleLength, periodLength)
+        val phase = if (day > 0) CycleCalculator.phaseForDay(day) else CyclePhase.MENSTRUAL
         val nextPeriod = CycleCalculator.nextPeriodStartMillis(lastPeriod, cycleLength, today)
+        val currentExpected = CycleCalculator.currentExpectedStart(today, lastPeriod, cycleLength)
         val fertile = CycleCalculator.fertileWindow(lastPeriod, cycleLength)
+        val lateBy = if (confirmedBleedingDay == 0 && expectedBleedingDay == 0) {
+            CycleCalculator.daysLate(today, lastPeriod, cycleLength, periodLength)
+        } else 0
         return PhaseSnapshot(
             phase = phase,
             day = day,
             cycleLength = cycleLength,
+            periodLengthDays = periodLength,
+            lastPeriodStartMillis = lastPeriod,
+            confirmedBleedingDay = confirmedBleedingDay,
+            expectedBleedingDay = expectedBleedingDay,
+            lateByDays = lateBy,
             nextPeriodMillis = nextPeriod,
+            currentExpectedStartMillis = currentExpected,
             fertileStartMillis = fertile.first,
             fertileEndMillis = fertile.second
         )
     }
 
+    /** Duration of the most recent logged period, defaulting to 5 days. */
+    fun lastDurationDays(): Int =
+        _uiState.value.entries.maxByOrNull { it.startDate }
+            ?.durationDays?.coerceIn(1, 14) ?: 5
+
+    private fun confirmedBleedingDay(todayMillis: Long, periodLength: Int): Int {
+        val today = startOfDay(todayMillis)
+        val entry = _uiState.value.entries.firstOrNull { e ->
+            val start = startOfDay(e.startDate)
+            today >= start && today < start + e.durationDays.coerceIn(1, 14) * DAY_MILLIS
+        } ?: return 0
+        return (((today - startOfDay(entry.startDate)) / DAY_MILLIS).toInt() + 1).coerceIn(1, periodLength)
+    }
+
     fun supportMode(): SupportMode = SupportMode.from(_uiState.value.user?.supportMode)
 
-    fun logPeriod(startDateMillis: Long, flowLevel: String, symptoms: List<String>, notes: String) {
+    fun logPeriod(startDateMillis: Long, durationDays: Int, symptoms: List<String>, notes: String) {
         viewModelScope.launch {
-            try {
-                val userId = authRepository.getCurrentUserId()
-                val user = _uiState.value.user ?: return@launch
-                val sanitized = startOfDay(startDateMillis)
-                val entry = CycleEntryEntity(
-                    userId = userId,
-                    startDate = sanitized,
-                    flowLevel = flowLevel,
-                    symptomsJson = encodeSymptoms(symptoms),
-                    notes = notes
-                )
-                _uiState.value = _uiState.value.copy(saving = true)
-                cycleRepository.upsertEntry(entry)
-                authRepository.saveProfile(user.copy(lastPeriodStart = sanitized))
-                _uiState.value = _uiState.value.copy(saving = false)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(saving = false, error = e.message)
-            }
+            doLogPeriod(startDateMillis, durationDays, symptoms, notes)
+        }
+    }
+
+    /** Logs the currently expected (or overdue) period as started without prompting for details. */
+    fun markPeriodStarted() {
+        viewModelScope.launch {
+            val user = _uiState.value.user ?: return@launch
+            val lastPeriod = user.lastPeriodStart ?: return@launch
+            if (lastPeriod <= 0L) return@launch
+            val cycleLength = (user.cycleLength ?: 28).coerceAtLeast(21)
+            val expectedStart = CycleCalculator.currentExpectedStart(
+                System.currentTimeMillis(), lastPeriod, cycleLength
+            )
+            doLogPeriod(expectedStart, lastDurationDays(), emptyList(), "Marked as started")
+        }
+    }
+
+    private suspend fun doLogPeriod(startDateMillis: Long, durationDays: Int, symptoms: List<String>, notes: String) {
+        try {
+            val userId = authRepository.getCurrentUserId()
+            val user = _uiState.value.user ?: return
+            val sanitized = startOfDay(startDateMillis)
+            val entry = CycleEntryEntity(
+                userId = userId,
+                startDate = sanitized,
+                durationDays = durationDays.coerceIn(1, 14),
+                flowLevel = "",
+                symptomsJson = encodeSymptoms(symptoms),
+                notes = notes
+            )
+            _uiState.value = _uiState.value.copy(saving = true)
+            cycleRepository.upsertEntry(entry)
+            authRepository.saveProfile(user.copy(lastPeriodStart = sanitized))
+            _uiState.value = _uiState.value.copy(saving = false)
+        } catch (e: Exception) {
+            _uiState.value = _uiState.value.copy(saving = false, error = e.message)
         }
     }
 
@@ -175,7 +227,18 @@ class CycleViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val user = _uiState.value.user ?: return@launch
-                authRepository.saveProfile(user.copy(lastPeriodStart = startOfDay(dateMillis)))
+                val day = startOfDay(dateMillis)
+                authRepository.saveProfile(user.copy(lastPeriodStart = day))
+                val alreadyLogged = _uiState.value.entries.any { startOfDay(it.startDate) == day }
+                if (!alreadyLogged) {
+                    cycleRepository.upsertEntry(
+                        CycleEntryEntity(
+                            userId = user.id,
+                            startDate = day,
+                            durationDays = lastDurationDays()
+                        )
+                    )
+                }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
@@ -206,4 +269,8 @@ class CycleViewModel @Inject constructor(
     }
 
     private fun startOfToday(): Long = startOfDay(System.currentTimeMillis())
+
+    private companion object {
+        const val DAY_MILLIS = 86_400_000L
+    }
 }

@@ -10,6 +10,7 @@ data class CycleEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val userId: String,
     val startDate: Long,
+    val durationDays: Int = 5,
     val flowLevel: String = "",
     val symptomsJson: String = "[]",
     val notes: String = "",

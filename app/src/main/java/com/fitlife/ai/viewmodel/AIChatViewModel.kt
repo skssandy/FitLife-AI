@@ -124,9 +124,11 @@ class AIChatViewModel @Inject constructor(
             if (profile.gender.equals("Female", ignoreCase = true) && lastPeriod != null && lastPeriod > 0) {
                 val len = (cycleLength ?: 28).coerceAtLeast(21)
                 val day = CycleCalculator.cycleDay(System.currentTimeMillis(), lastPeriod, len)
-                val phase = CycleCalculator.phaseForDay(day)
-                context.append("The user is on day $day of their menstrual cycle (${phase.displayName} phase). ")
-                context.append("Phase guidance: training=${phase.training} nutrition=${phase.nutrition}. ")
+                if (day > 0) {
+                    val phase = CycleCalculator.phaseForDay(day)
+                    context.append("The user is on day $day of their menstrual cycle (${phase.displayName} phase). ")
+                    context.append("Phase guidance: training=${phase.training} nutrition=${phase.nutrition}. ")
+                }
             }
         }
         return base + " " + context.toString()

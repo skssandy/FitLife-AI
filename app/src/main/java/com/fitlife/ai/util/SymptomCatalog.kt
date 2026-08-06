@@ -59,6 +59,7 @@ object SymptomCatalog {
         Symptom("heartburn", "Heartburn", "Digestive"),
 
         // Menstrual
+        Symptom("normal_flow", "Normal flow", "Menstrual"),
         Symptom("heavy_flow", "Heavy flow", "Menstrual"),
         Symptom("light_flow", "Light flow", "Menstrual"),
         Symptom("spotting", "Spotting", "Menstrual"),

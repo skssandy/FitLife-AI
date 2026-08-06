@@ -78,7 +78,6 @@ fun CycleScreen(
     val phaseInfo = viewModel.phaseInfo()
 
     var logOffsetDays by rememberSaveable { mutableStateOf(0) }
-    var flowLevel by rememberSaveable { mutableStateOf("Medium") }
     var notes by rememberSaveable { mutableStateOf("") }
     var logSymptoms by rememberSaveable { mutableStateOf(listOf<String>()) }
 
@@ -118,11 +117,16 @@ fun CycleScreen(
         val cycleActive = phaseInfo != null && mode in listOf(SupportMode.STANDARD, SupportMode.TTC, SupportMode.PCOS)
         if (cycleActive) {
             phaseInfo?.let { snapshot ->
-                PeriodStatusBanner(snapshot = snapshot, todayMillis = System.currentTimeMillis())
+                PeriodStatusBanner(
+                    snapshot = snapshot,
+                    todayMillis = System.currentTimeMillis(),
+                    onLogStarted = { viewModel.markPeriodStarted() }
+                )
                 Spacer(Modifier.height(16.dp))
                 CycleCalendar(
                     lastPeriodStart = user.lastPeriodStart,
                     cycleLength = snapshot.cycleLength,
+                    periodLength = snapshot.periodLengthDays,
                     entries = uiState.entries,
                     phaseInfo = snapshot
                 )
@@ -178,17 +182,16 @@ fun CycleScreen(
         PeriodLogCard(
             offsetDays = logOffsetDays,
             onOffsetChange = { logOffsetDays = it },
-            flowLevel = flowLevel,
-            onFlowChange = { flowLevel = it },
+            defaultDuration = viewModel.lastDurationDays(),
             notes = notes,
             onNotesChange = { notes = it },
             symptoms = logSymptoms,
             onSymptomsChange = { logSymptoms = it },
             saving = uiState.saving,
-            onLog = {
+            onLog = { duration ->
                 viewModel.logPeriod(
                     startDateMillis = dayOffsetMillis(logOffsetDays),
-                    flowLevel = flowLevel,
+                    durationDays = duration,
                     symptoms = logSymptoms,
                     notes = notes
                 )
@@ -238,17 +241,32 @@ private fun SupportModeSelector(selected: SupportMode, onSelect: (SupportMode) -
 
 @Composable
 private fun PhaseCard(snapshot: PhaseSnapshot) {
+    val subtitle = when {
+        snapshot.day <= 0 ->
+            "Cycle tracking starts ${formatDate(snapshot.lastPeriodStartMillis)} · Log your period to begin"
+        snapshot.confirmedBleedingDay > 0 ->
+            "Day ${snapshot.day} of ${snapshot.cycleLength} · Period in progress (Day ${snapshot.confirmedBleedingDay} of ${snapshot.periodLengthDays})"
+        snapshot.expectedBleedingDay > 0 ->
+            "Day ${snapshot.day} of ${snapshot.cycleLength} · Expected period window — log it when it starts"
+        else ->
+            "Day ${snapshot.day} of ${snapshot.cycleLength}" +
+                (snapshot.nextPeriodMillis?.let { " · Next period ~${formatDate(it)}" } ?: "")
+    }
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
         Column(Modifier.padding(16.dp)) {
-            Text(snapshot.phase.displayName, style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(4.dp))
             Text(
-                "Day ${snapshot.day} of ${snapshot.cycleLength}" +
-                    (snapshot.nextPeriodMillis?.let { " · Next period ~${formatDate(it)}" } ?: ""),
+                if (snapshot.day <= 0) "Cycle not started" else snapshot.phase.displayName,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (snapshot.day <= 0)
+                    "Once you log the first day of your period, workouts and nutrition adapt to your cycle."
+                else snapshot.phase.description,
                 style = MaterialTheme.typography.bodyMedium
             )
-            Spacer(Modifier.height(8.dp))
-            Text(snapshot.phase.description, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -339,30 +357,57 @@ private fun CycleLengthSelector(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun PeriodStatusBanner(snapshot: PhaseSnapshot, todayMillis: Long) {
-    val periodInProgress = snapshot.day <= 5
-    val text = if (periodInProgress) {
-        "Period in progress · Day ${snapshot.day} of 5"
-    } else {
-        "Period not started yet · Next expected ${snapshot.nextPeriodMillis?.let { formatDate(it) } ?: "—"}"
+private fun PeriodStatusBanner(snapshot: PhaseSnapshot, todayMillis: Long, onLogStarted: () -> Unit) {
+    val confirmed = snapshot.confirmedBleedingDay
+    val expected = snapshot.expectedBleedingDay
+    val late = snapshot.lateByDays
+    val state: BannerState = when {
+        confirmed > 0 -> BannerState.InProgress
+        expected > 0 -> BannerState.Expected
+        late > 0 -> BannerState.Late
+        else -> BannerState.Upcoming
+    }
+    val text = when (state) {
+        BannerState.InProgress -> "Period in progress · Day $confirmed of ${snapshot.periodLengthDays}"
+        BannerState.Expected ->
+            "Expected period window · Day $expected of ${snapshot.periodLengthDays} · Log it when it starts"
+        BannerState.Late -> {
+            val on = snapshot.currentExpectedStartMillis?.let { formatDate(it) } ?: ""
+            "Period is $late ${if (late == 1) "day" else "days"} late" + if (on.isNotEmpty()) " · Expected on $on" else ""
+        }
+        BannerState.Upcoming ->
+            "Period not started yet · Next expected ${snapshot.nextPeriodMillis?.let { formatDate(it) } ?: "—"}"
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = if (periodInProgress) MaterialTheme.colorScheme.errorContainer
-            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = when (state) {
+                BannerState.InProgress -> MaterialTheme.colorScheme.errorContainer
+                BannerState.Expected, BannerState.Late -> MaterialTheme.colorScheme.tertiaryContainer
+                BannerState.Upcoming -> MaterialTheme.colorScheme.surfaceVariant
+            }
         )
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text, style = MaterialTheme.typography.titleSmall)
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            if (state == BannerState.Expected || state == BannerState.Late) {
+                Button(onClick = onLogStarted) { Text("Log as started") }
+            }
         }
     }
 }
+
+private enum class BannerState { InProgress, Expected, Late, Upcoming }
 
 @Composable
 private fun CycleCalendar(
     lastPeriodStart: Long?,
     cycleLength: Int,
+    periodLength: Int,
     entries: List<com.fitlife.ai.data.local.entity.CycleEntryEntity>,
     phaseInfo: PhaseSnapshot
 ) {
@@ -373,7 +418,7 @@ private fun CycleCalendar(
             Text("Cycle calendar", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(4.dp))
             Text(
-                "Tinted by phase · solid = period · ring = today",
+                "solid red = logged period · light red = predicted · tinted by phase · ring = today",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -411,13 +456,9 @@ private fun CycleCalendar(
                 .get(Calendar.DAY_OF_WEEK)
             val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
 
-            val bleedingDays = buildSet {
-                entries.forEach { entry ->
-                    for (i in 0 until 5) add(startOfDayMillis(entry.startDate) + i * DAY_MILLIS)
-                }
-                phaseInfo.nextPeriodMillis?.let { next ->
-                    for (i in 0 until 5) add(startOfDayMillis(next) + i * DAY_MILLIS)
-                }
+            val confirmedPeriods = entries.map { entry ->
+                val start = startOfDayMillis(entry.startDate)
+                start to start + entry.durationDays.coerceIn(1, 14) * DAY_MILLIS
             }
             val fertileStart = phaseInfo.fertileStartMillis
             val fertileEnd = phaseInfo.fertileEndMillis
@@ -437,11 +478,16 @@ private fun CycleCalendar(
             cells.chunked(7).forEach { week ->
                 Row(Modifier.fillMaxWidth()) {
                     week.forEach { (day, inMonth, millis) ->
+                        val isConfirmed = millis != null && confirmedPeriods.any { (s, e) -> millis in s until e }
+                        val isExpected = millis != null && !isConfirmed &&
+                            lastPeriodStart != null && lastPeriodStart > 0 &&
+                            CycleCalculator.bleedingDay(millis, lastPeriodStart, cycleLength, periodLength) > 0
                         DayCell(
                             day = day,
                             inMonth = inMonth,
                             isToday = millis != null && millis == todayStart,
-                            isBleeding = millis != null && millis in bleedingDays,
+                            isConfirmedPeriod = isConfirmed,
+                            isExpectedPeriod = isExpected,
                             isFertile = millis != null && fertileStart != null && fertileEnd != null && millis in fertileStart..fertileEnd,
                             phase = if (inMonth && millis != null && lastPeriodStart != null && lastPeriodStart > 0)
                                 CycleCalculator.phaseForDay(
@@ -459,7 +505,8 @@ private fun CycleCalendar(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                LegendDot(MaterialTheme.colorScheme.error) { "Period" }
+                LegendDot(MaterialTheme.colorScheme.error) { "Logged" }
+                LegendDot(MaterialTheme.colorScheme.error.copy(alpha = 0.35f)) { "Predicted" }
                 LegendDot(MaterialTheme.colorScheme.tertiary) { "Fertile" }
                 LegendDot(MaterialTheme.colorScheme.primaryContainer) { "Phase tint" }
             }
@@ -472,19 +519,21 @@ private fun DayCell(
     day: Int,
     inMonth: Boolean,
     isToday: Boolean,
-    isBleeding: Boolean,
+    isConfirmedPeriod: Boolean,
+    isExpectedPeriod: Boolean,
     isFertile: Boolean,
     phase: CyclePhase?,
     modifier: Modifier = Modifier
 ) {
     val bg = when {
-        isBleeding -> MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+        isConfirmedPeriod -> MaterialTheme.colorScheme.error
+        isExpectedPeriod -> MaterialTheme.colorScheme.error.copy(alpha = 0.35f)
         isFertile -> MaterialTheme.colorScheme.tertiary
         phase != null -> phaseColor(phase)
         else -> Color.Transparent
     }
     val fg = when {
-        isBleeding -> MaterialTheme.colorScheme.onError
+        isConfirmedPeriod -> MaterialTheme.colorScheme.onError
         else -> MaterialTheme.colorScheme.onSurface
     }
     Box(
@@ -503,7 +552,7 @@ private fun DayCell(
             if (inMonth) day.toString() else "",
             style = MaterialTheme.typography.labelMedium,
             color = if (inMonth) fg else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
-            fontWeight = if (isBleeding || isToday) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isConfirmedPeriod || isToday) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
@@ -610,15 +659,15 @@ private const val DAY_MILLIS = 86_400_000L
 private fun PeriodLogCard(
     offsetDays: Int,
     onOffsetChange: (Int) -> Unit,
-    flowLevel: String,
-    onFlowChange: (String) -> Unit,
+    defaultDuration: Int,
     notes: String,
     onNotesChange: (String) -> Unit,
     symptoms: List<String>,
     onSymptomsChange: (List<String>) -> Unit,
     saving: Boolean,
-    onLog: () -> Unit
+    onLog: (durationDays: Int) -> Unit
 ) {
+    var durationDays by rememberSaveable { mutableStateOf(defaultDuration.coerceIn(1, 14)) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text("Log a period start", style = MaterialTheme.typography.titleMedium)
@@ -633,14 +682,14 @@ private fun PeriodLogCard(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            Text("Flow", style = MaterialTheme.typography.labelLarge)
+            Text("How many days does it last?", style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(4.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Light", "Normal", "Medium", "Heavy").forEach { level ->
+                listOf(3, 4, 5, 6, 7).forEach { days ->
                     FilterChip(
-                        selected = flowLevel == level,
-                        onClick = { onFlowChange(level) },
-                        label = { Text(level) }
+                        selected = durationDays == days,
+                        onClick = { durationDays = days },
+                        label = { Text("$days days") }
                     )
                 }
             }
@@ -671,7 +720,7 @@ private fun PeriodLogCard(
             )
             Spacer(Modifier.height(12.dp))
             Button(
-                onClick = onLog,
+                onClick = { onLog(durationDays) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !saving
             ) {
@@ -722,7 +771,7 @@ private fun HistoryCard(entries: List<com.fitlife.ai.data.local.entity.CycleEntr
                     Text(formatDate(entry.startDate), style = MaterialTheme.typography.titleSmall)
                     Text(
                         listOfNotNull(
-                            entry.flowLevel.takeIf { it.isNotBlank() },
+                            "${entry.durationDays} days",
                             decodeSymptomsCount(entry.symptomsJson).let {
                                 if (it > 0) "$it symptoms" else null
                             }
