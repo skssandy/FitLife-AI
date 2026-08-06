@@ -1,5 +1,7 @@
 package com.fitlife.ai.ui.screens.programs
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,9 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,8 +38,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
+import com.fitlife.ai.data.ExerciseLibrary
+import com.fitlife.ai.data.ProgramExercise
 import com.fitlife.ai.data.WorkoutProgramTemplate
 import com.fitlife.ai.data.local.entity.WorkoutProgramEntity
 import com.fitlife.ai.viewmodel.ProgramsViewModel
@@ -119,6 +131,7 @@ private fun ProgramCard(
     onDelete: () -> Unit,
     viewModel: ProgramsViewModel
 ) {
+    var expandedExercise by remember { mutableStateOf<String?>(null) }
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
@@ -140,23 +153,89 @@ private fun ProgramCard(
             }
             if (expanded) {
                 val days = viewModel.parseDays(program.daysJson)
-                days.forEach { day ->
+                days.forEachIndexed { dayIndex, day ->
                     Spacer(Modifier.height(8.dp))
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(Modifier.padding(10.dp).fillMaxWidth()) {
                             Text(day.name, style = MaterialTheme.typography.titleSmall)
-                            day.exercises.forEach { ex ->
-                                Text(
-                                    viewModel.exerciseLabel(ex),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                            day.exercises.forEachIndexed { exIndex, ex ->
+                                ExerciseRow(
+                                    exercise = ex,
+                                    expanded = expandedExercise == "$dayIndex-$exIndex",
+                                    onToggle = {
+                                        expandedExercise =
+                                            if (expandedExercise == "$dayIndex-$exIndex") null else "$dayIndex-$exIndex"
+                                    }
                                 )
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExerciseRow(
+    exercise: ProgramExercise,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    val context = LocalContext.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp)),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TextButton(onClick = onToggle, modifier = Modifier.weight(1f)) {
+            Text(
+                "${exercise.name} · ${exercise.sets} × ${exercise.reps}",
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        IconButton(onClick = onToggle) {
+            Icon(
+                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = if (expanded) "Hide details" else "Show details"
+            )
+        }
+    }
+    if (expanded) {
+        val info = ExerciseLibrary.get(exercise.name)
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+            info.imageUrl?.let { url ->
+                AsyncImage(
+                    model = url,
+                    contentDescription = exercise.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            Text(
+                "Sets: ${exercise.sets}   Reps: ${exercise.reps}",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(info.instructions, style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(info.videoUrl))
+                    )
+                }
+            ) {
+                Text("Watch on YouTube")
             }
         }
     }
