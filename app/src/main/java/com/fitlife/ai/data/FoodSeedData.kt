@@ -295,6 +295,13 @@ object FoodSeedData {
         FoodItemEntity(name = "Vada", category = "Indian Staples", servingSize = "1 pc (40g)", calories = 120, proteinG = 3.0, carbsG = 12.0, fatG = 7.0, dietType = "veg"),
         FoodItemEntity(name = "Sambar", category = "Indian Staples", servingSize = "1 cup (240g)", calories = 120, proteinG = 5.0, carbsG = 18.0, fatG = 3.0, dietType = "veg"),
         FoodItemEntity(name = "Coconut Chutney", category = "Indian Staples", servingSize = "1 tbsp (20g)", calories = 60, proteinG = 0.8, carbsG = 3.0, fatG = 5.0, dietType = "veg"),
+        FoodItemEntity(name = "Pongal (ven)", category = "Indian Staples", servingSize = "1 cup (200g)", calories = 250, proteinG = 6.0, carbsG = 45.0, fatG = 5.0, dietType = "jain"),
+        FoodItemEntity(name = "Rava Dosa", category = "Indian Staples", servingSize = "1 pc (150g)", calories = 170, proteinG = 4.0, carbsG = 30.0, fatG = 4.0, dietType = "jain"),
+        FoodItemEntity(name = "Medu Vada", category = "Indian Staples", servingSize = "2 pcs (80g)", calories = 180, proteinG = 5.0, carbsG = 24.0, fatG = 8.0, dietType = "veg"),
+        FoodItemEntity(name = "Lemon Rice", category = "Indian Staples", servingSize = "1 cup (180g)", calories = 200, proteinG = 4.0, carbsG = 38.0, fatG = 4.0, dietType = "jain"),
+        FoodItemEntity(name = "Appam", category = "Indian Staples", servingSize = "1 pc (90g)", calories = 140, proteinG = 3.0, carbsG = 28.0, fatG = 2.0, dietType = "jain"),
+        FoodItemEntity(name = "Puttu (steamed rice)", category = "Indian Staples", servingSize = "1 cup (200g)", calories = 220, proteinG = 4.0, carbsG = 46.0, fatG = 1.0, dietType = "jain"),
+        FoodItemEntity(name = "Kerala Parotta", category = "Indian Staples", servingSize = "1 pc (100g)", calories = 210, proteinG = 5.0, carbsG = 32.0, fatG = 7.0, dietType = "veg"),
 
         // Indian dals & curries
         FoodItemEntity(name = "Dal Tadka", category = "Indian Curries", servingSize = "1 cup (240g)", calories = 200, proteinG = 11.0, carbsG = 25.0, fatG = 5.0, dietType = "veg"),
@@ -312,6 +319,10 @@ object FoodSeedData {
         FoodItemEntity(name = "Mix Veg Sabzi", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 140, proteinG = 3.5, carbsG = 15.0, fatG = 8.0, dietType = "veg"),
         FoodItemEntity(name = "Gobi Manchurian", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 200, proteinG = 4.0, carbsG = 24.0, fatG = 10.0, dietType = "veg"),
         FoodItemEntity(name = "Gatte ki Sabzi", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 220, proteinG = 8.0, carbsG = 24.0, fatG = 10.0, dietType = "veg"),
+        FoodItemEntity(name = "Rasam", category = "Indian Curries", servingSize = "1 cup (180g)", calories = 90, proteinG = 4.0, carbsG = 14.0, fatG = 2.0, dietType = "veg"),
+        FoodItemEntity(name = "Avial", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 180, proteinG = 4.0, carbsG = 12.0, fatG = 12.0, dietType = "veg"),
+        FoodItemEntity(name = "Kadala Curry (black chana)", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 180, proteinG = 9.0, carbsG = 24.0, fatG = 6.0, dietType = "veg"),
+        FoodItemEntity(name = "Ghee Rice", category = "Indian Curries", servingSize = "1 cup (200g)", calories = 260, proteinG = 4.0, carbsG = 40.0, fatG = 9.0, dietType = "veg"),
 
         // Indian non-veg main dishes
         FoodItemEntity(name = "Chicken Biryani", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 350, proteinG = 20.0, carbsG = 42.0, fatG = 11.0, dietType = "non_veg"),
@@ -330,6 +341,8 @@ object FoodSeedData {
         FoodItemEntity(name = "Prawn Curry", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 240, proteinG = 18.0, carbsG = 12.0, fatG = 13.0, dietType = "non_veg"),
         FoodItemEntity(name = "Egg Curry", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 280, proteinG = 13.0, carbsG = 10.0, fatG = 20.0, dietType = "non_veg"),
         FoodItemEntity(name = "Chicken Curry (Indian)", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 320, proteinG = 24.0, carbsG = 12.0, fatG = 19.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Chicken Chettinad", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 320, proteinG = 24.0, carbsG = 8.0, fatG = 20.0, dietType = "non_veg"),
+        FoodItemEntity(name = "Malabar Fish Curry", category = "Indian Non-Veg", servingSize = "1 cup (240g)", calories = 260, proteinG = 20.0, carbsG = 8.0, fatG = 16.0, dietType = "non_veg"),
 
         // Indian snacks & chaat
         FoodItemEntity(name = "Samosa", category = "Indian Snacks", servingSize = "1 pc (70g)", calories = 262, proteinG = 3.8, carbsG = 28.0, fatG = 15.0, dietType = "veg"),

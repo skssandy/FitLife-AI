@@ -143,7 +143,8 @@ class OnboardingViewModel @Inject constructor(
         }
         val tdee = (bmr * activityMultiplier).toInt()
 
-        val calorieTarget = when (fitnessGoal) {
+        val primaryGoal = fitnessGoal?.split(",")?.firstOrNull()?.trim()
+        val calorieTarget = when (primaryGoal) {
             "Weight Loss" -> tdee - 400
             "Muscle Gain" -> tdee + 300
             else -> tdee

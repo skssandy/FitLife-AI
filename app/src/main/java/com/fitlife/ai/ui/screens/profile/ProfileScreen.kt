@@ -29,29 +29,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitlife.ai.util.FoodDiet
 import com.fitlife.ai.viewmodel.ProfileViewModel
 
-private val dietOptions = listOf("Vegetarian", "Non-Vegetarian", "Jain", "No preference")
 private val mealCountOptions = listOf("3", "4", "5", "6")
-
-private fun dietLabelFor(dietKey: String?): String = when (dietKey?.trim()?.lowercase()) {
-    "veg", "vegetarian" -> "Vegetarian"
-    "non_veg", "non-veg", "nonveg" -> "Non-Vegetarian"
-    "jain" -> "Jain"
-    else -> "No preference"
-}
-
-private fun dietKeyFor(label: String): String = when (label) {
-    "Vegetarian" -> "veg"
-    "Non-Vegetarian" -> "non_veg"
-    "Jain" -> "jain"
-    else -> "any"
-}
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -66,7 +53,7 @@ fun ProfileScreen(
     var heightCm by remember(user) { mutableStateOf(user?.heightCm?.toString() ?: "") }
     var weightKg by remember(user) { mutableStateOf(user?.weightKg?.toString() ?: "") }
     var fitnessGoal by remember(user) { mutableStateOf(user?.fitnessGoal ?: "") }
-    var dietType by remember(user) { mutableStateOf(dietLabelFor(user?.dietType)) }
+    var dietTypes by remember(user) { mutableStateOf(FoodDiet.selectedLabels(user?.dietType).toMutableStateList()) }
     var mealCount by remember(user) { mutableStateOf(user?.mealCount?.toString() ?: "") }
 
     Column(
@@ -119,7 +106,7 @@ fun ProfileScreen(
         OutlinedTextField(
             value = fitnessGoal,
             onValueChange = { fitnessGoal = it },
-            label = { Text("Fitness Goal") },
+            label = { Text("Fitness Goal(s)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
@@ -128,15 +115,23 @@ fun ProfileScreen(
         Text("Dietary Preference", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         FlowRow {
-            dietOptions.forEach { option ->
+            FoodDiet.options.forEach { option ->
                 FilterChip(
-                    selected = dietType == option,
-                    onClick = { dietType = option },
+                    selected = dietTypes.contains(option),
+                    onClick = {
+                        if (dietTypes.contains(option)) dietTypes.remove(option) else dietTypes.add(option)
+                    },
                     label = { Text(option) },
                     modifier = Modifier.padding(end = 8.dp, bottom = 4.dp)
                 )
             }
         }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Select all that apply. If you pick both Vegetarian and Non-Vegetarian, meal plans include both.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Spacer(Modifier.height(16.dp))
 
         Text("Meals Per Day", style = MaterialTheme.typography.titleMedium)
@@ -168,7 +163,7 @@ fun ProfileScreen(
                     gender = null,
                     fitnessGoal = fitnessGoal.ifBlank { null },
                     activityLevel = null,
-                    dietType = dietType.ifBlank { null }?.let { dietKeyFor(it) },
+                    dietType = FoodDiet.keysForSelected(dietTypes),
                     mealCount = mealCount.toIntOrNull()
                 )
             },

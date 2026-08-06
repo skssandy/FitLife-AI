@@ -35,7 +35,10 @@ object NutritionCalculator {
         return (bmr * activityMultiplier(activityLevel)).toInt()
     }
 
-    fun calorieTarget(tdee: Int, goal: String?): Int = when (goal) {
+    fun primaryGoal(goal: String?): String? =
+        goal?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+
+    fun calorieTarget(tdee: Int, goal: String?): Int = when (primaryGoal(goal)) {
         "Weight Loss" -> tdee - 400
         "Muscle Gain" -> tdee + 300
         else -> tdee
@@ -43,7 +46,7 @@ object NutritionCalculator {
 
     fun calculateMacros(tdee: Int, goal: String?, weightKg: Double): MacroTargets {
         val calories = calorieTarget(tdee, goal)
-        val proteinG = when (goal) {
+        val proteinG = when (primaryGoal(goal)) {
             "Weight Loss" -> (weightKg * 2.0).toInt()
             "Muscle Gain" -> (weightKg * 1.8).toInt()
             else -> (weightKg * 1.6).toInt()
