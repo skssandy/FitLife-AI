@@ -8,6 +8,7 @@ import com.fitlife.ai.data.local.AppDatabase
 import com.fitlife.ai.data.local.dao.BloodReportDao
 import com.fitlife.ai.data.local.dao.CalorieEntryDao
 import com.fitlife.ai.data.local.dao.ChatMessageDao
+import com.fitlife.ai.data.local.dao.CycleDayDao
 import com.fitlife.ai.data.local.dao.CycleEntryDao
 import com.fitlife.ai.data.local.dao.DailyMetricDao
 import com.fitlife.ai.data.local.dao.FoodItemDao
@@ -191,6 +192,27 @@ object DatabaseModule {
         }
     }
 
+    private val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS cycle_days (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "userId TEXT NOT NULL, " +
+                    "date INTEGER NOT NULL, " +
+                    "note TEXT NOT NULL DEFAULT '', " +
+                    "moodId TEXT, " +
+                    "weightKg REAL, " +
+                    "synced INTEGER NOT NULL DEFAULT 0, " +
+                    "createdAt INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS index_cycle_days_userId_date " +
+                    "ON cycle_days (userId, date)"
+            )
+            db.execSQL("ALTER TABLE users ADD COLUMN birthControl TEXT")
+        }
+    }
+
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AppDatabase =
@@ -206,7 +228,8 @@ object DatabaseModule {
                 MIGRATION_8_9,
                 MIGRATION_9_10,
                 MIGRATION_10_11,
-                MIGRATION_11_12
+                MIGRATION_11_12,
+                MIGRATION_12_13
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -222,4 +245,5 @@ object DatabaseModule {
     @Provides fun provideDailyMetricDao(db: AppDatabase): DailyMetricDao = db.dailyMetricDao()
     @Provides fun provideCycleEntryDao(db: AppDatabase): CycleEntryDao = db.cycleEntryDao()
     @Provides fun provideSymptomLogDao(db: AppDatabase): SymptomLogDao = db.symptomLogDao()
+    @Provides fun provideCycleDayDao(db: AppDatabase): CycleDayDao = db.cycleDayDao()
 }

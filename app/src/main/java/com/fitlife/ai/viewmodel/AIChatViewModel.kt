@@ -7,6 +7,7 @@ import com.fitlife.ai.BuildConfig
 import com.fitlife.ai.data.local.entity.ChatMessageEntity
 import com.fitlife.ai.data.local.entity.UserEntity
 import com.fitlife.ai.data.repository.AuthRepository
+import com.fitlife.ai.data.repository.CycleRepository
 import com.fitlife.ai.data.local.dao.ChatMessageDao
 import com.fitlife.ai.util.CycleCalculator
 import com.fitlife.ai.util.CyclePhase
@@ -42,7 +43,8 @@ data class AIChatUiState(
 @HiltViewModel
 class AIChatViewModel @Inject constructor(
     private val chatMessageDao: ChatMessageDao,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val cycleRepository: CycleRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AIChatUiState())
@@ -91,7 +93,8 @@ class AIChatViewModel @Inject constructor(
 
             try {
                 val profile = authRepository.getUserOnce(userId)
-                val instruction = buildSystemInstruction(profile)
+                val cycleContext = buildCycleContext(userId)
+                val instruction = buildSystemInstruction(profile, cycleContext)
                 val response = withContext(Dispatchers.IO) { callGeminiApi(apiKey, text, instruction) }
                 val aiMessage = ChatMessageEntity(userId = userId, role = "assistant", content = response)
                 chatMessageDao.insert(aiMessage)
@@ -103,7 +106,44 @@ class AIChatViewModel @Inject constructor(
         }
     }
 
-    private fun buildSystemInstruction(profile: UserEntity?): String {
+    private suspend fun buildCycleContext(userId: String): String {
+        val sb = StringBuilder()
+        try {
+            val entries = cycleRepository.getEntriesOnce(userId)
+            if (entries.isNotEmpty()) {
+                sb.append(" Period history (recent first): ")
+                entries.take(6).forEach { e ->
+                    sb.append("start ${dateLabel(e.startDate)} (${e.durationDays}d)")
+                    if (e.symptomsJson.isNotBlank() && e.symptomsJson != "[]") sb.append(", symptoms ${e.symptomsJson}")
+                    if (e.notes.isNotBlank()) sb.append(", note \"${e.notes}\"")
+                    sb.append(" | ")
+                }
+            }
+            val days = cycleRepository.getCycleDaysOnce(userId)
+            if (days.isNotEmpty()) {
+                sb.append(" Daily journal (recent first): ")
+                days.take(7).forEach { d ->
+                    val parts = mutableListOf<String>()
+                    d.moodId?.let { parts.add("mood ${it}") }
+                    d.weightKg?.let { parts.add("weight ${it}kg") }
+                    if (d.note.isNotBlank()) parts.add("note \"${d.note}\"")
+                    if (parts.isNotEmpty()) sb.append("${dateLabel(d.date)} [${parts.joinToString(", ")}] | ")
+                }
+            }
+            val symptoms = cycleRepository.getSymptomsOnce(userId)
+            if (symptoms.isNotEmpty()) {
+                sb.append(" Recent symptoms: ")
+                symptoms.take(7).forEach { s ->
+                    if (s.symptomsJson.isNotBlank() && s.symptomsJson != "[]") {
+                        sb.append("${dateLabel(s.date)} (${s.symptomsJson}) | ")
+                    }
+                }
+            }
+        } catch (_: Exception) { }
+        return sb.toString().trim()
+    }
+
+    private fun buildSystemInstruction(profile: UserEntity?, cycleContext: String): String {
         val base = "You are a professional fitness trainer and nutritionist. " +
             "Provide helpful, accurate advice about exercise, nutrition, and healthy living. " +
             "Keep responses concise and actionable."
@@ -129,10 +169,17 @@ class AIChatViewModel @Inject constructor(
                     context.append("The user is on day $day of their menstrual cycle (${phase.displayName} phase). ")
                     context.append("Phase guidance: training=${phase.training} nutrition=${phase.nutrition}. ")
                 }
+                if (!profile.birthControl.isNullOrBlank()) {
+                    context.append("The user is using birth control (${profile.birthControl}), so do not predict ovulation or a fertile window. ")
+                }
             }
         }
+        if (cycleContext.isNotBlank()) context.append(cycleContext).append(" ")
         return base + " " + context.toString()
     }
+
+    private fun dateLabel(millis: Long): String =
+        java.text.SimpleDateFormat("MMM d", java.util.Locale.getDefault()).format(java.util.Date(millis))
 
     private fun callGeminiApi(apiKey: String, prompt: String, instruction: String): String {
         val url = URL("https://generativelanguage.googleapis.com/v1beta/models/$GEMINI_MODEL:generateContent?key=$apiKey")

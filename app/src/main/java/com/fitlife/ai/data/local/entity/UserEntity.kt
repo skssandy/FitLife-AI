@@ -26,6 +26,7 @@ data class UserEntity(
     val cycleLength: Int? = null,
     val lastPeriodStart: Long? = null,
     val supportMode: String? = null,
+    val birthControl: String? = null,
     val hydrationTargetMl: Int? = null,
     val dietType: String? = null,
     val mealCount: Int? = null,

@@ -2,6 +2,7 @@ package com.fitlife.ai.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fitlife.ai.data.local.entity.CycleDayEntity
 import com.fitlife.ai.data.local.entity.CycleEntryEntity
 import com.fitlife.ai.data.local.entity.SymptomLogEntity
 import com.fitlife.ai.data.local.entity.UserEntity
@@ -36,6 +37,7 @@ data class CycleUiState(
     val user: UserEntity? = null,
     val entries: List<CycleEntryEntity> = emptyList(),
     val symptomLogs: List<SymptomLogEntity> = emptyList(),
+    val cycleDays: List<CycleDayEntity> = emptyList(),
     val todaySymptoms: List<String> = emptyList(),
     val isLoading: Boolean = true,
     val saving: Boolean = false,
@@ -77,6 +79,11 @@ class CycleViewModel @Inject constructor(
                             symptomLogs = logs,
                             todaySymptoms = todayLog?.let { decodeSymptoms(it.symptomsJson) } ?: emptyList()
                         )
+                    }
+                }
+                launch {
+                    cycleRepository.getCycleDays(userId).collect { days ->
+                        _uiState.value = _uiState.value.copy(cycleDays = days)
                     }
                 }
             } catch (e: Exception) {
@@ -212,6 +219,108 @@ class CycleViewModel @Inject constructor(
         }
     }
 
+    /** Today's journal row (note/mood/weight), if any. */
+    fun todayJournal(): CycleDayEntity? {
+        val today = startOfToday()
+        return _uiState.value.cycleDays.firstOrNull { isSameDay(it.date, today) }
+    }
+
+    /** Saves today's journal. Passing null keeps the existing value for that field. */
+    fun saveJournal(note: String?, moodId: String?, weightKg: Double?) {
+        viewModelScope.launch {
+            try {
+                val userId = authRepository.getCurrentUserId()
+                val today = startOfToday()
+                val existing = cycleRepository.getCycleDayForDay(userId, today)
+                val merged = (existing ?: CycleDayEntity(userId = userId, date = today)).copy(
+                    note = note ?: existing?.note ?: "",
+                    moodId = moodId ?: existing?.moodId,
+                    weightKg = weightKg ?: existing?.weightKg
+                )
+                _uiState.value = _uiState.value.copy(saving = true)
+                cycleRepository.upsertCycleDay(merged)
+                _uiState.value = _uiState.value.copy(saving = false)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(saving = false, error = e.message)
+            }
+        }
+    }
+
+    /** True when the user tracks a birth control method (fertility/ovulation displays are suppressed). */
+    fun isOnBirthControl(): Boolean = !_uiState.value.user?.birthControl.isNullOrBlank()
+
+    fun setBirthControl(method: String?) {
+        viewModelScope.launch {
+            try {
+                val user = _uiState.value.user ?: return@launch
+                authRepository.saveProfile(user.copy(birthControl = method?.takeIf { it.isNotBlank() }))
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
+            }
+        }
+    }
+
+    /** Human-readable text report of the user's cycle data for sharing/export. */
+    fun buildCycleReport(): String {
+        val user = _uiState.value.user ?: return "No profile data."
+        val sb = StringBuilder()
+        sb.appendLine("FitLife AI — Cycle Report")
+        sb.appendLine("Generated ${java.text.SimpleDateFormat("MMM d, yyyy h:mm a", java.util.Locale.getDefault()).format(java.util.Date())}")
+        sb.appendLine()
+        sb.appendLine("Profile")
+        user.displayName?.let { sb.appendLine("Name: $it") }
+        if (user.lastPeriodStart != null && user.lastPeriodStart > 0L) {
+            sb.appendLine("Last period start: ${formatReportDate(user.lastPeriodStart)}")
+        }
+        sb.appendLine("Cycle length: ${user.cycleLength ?: 28} days")
+        user.supportMode?.let { sb.appendLine("Support mode: $it") }
+        if (isOnBirthControl()) sb.appendLine("Birth control: ${user.birthControl}")
+        sb.appendLine()
+
+        val entries = _uiState.value.entries
+        if (entries.isNotEmpty()) {
+            sb.appendLine("Period history")
+            entries.forEach { e ->
+                sb.appendLine("- ${formatReportDate(e.startDate)} · ${e.durationDays} days" +
+                    (if (e.notes.isNotBlank()) " · note: ${e.notes}" else ""))
+            }
+            sb.appendLine()
+        }
+
+        val logs = _uiState.value.symptomLogs
+        if (logs.isNotEmpty()) {
+            sb.appendLine("Symptom log")
+            logs.take(20).forEach { l ->
+                val names = decodeSymptoms(l.symptomsJson)
+                if (names.isNotEmpty()) {
+                    sb.appendLine("- ${formatReportDate(l.date)}: ${names.joinToString(", ")}")
+                }
+            }
+            sb.appendLine()
+        }
+
+        val days = _uiState.value.cycleDays
+        if (days.isNotEmpty()) {
+            sb.appendLine("Daily notes & weight")
+            days.take(30).forEach { d ->
+                val parts = mutableListOf<String>()
+                d.moodId?.let { parts.add("mood: ${moodName(it)}") }
+                d.weightKg?.let { parts.add("weight: $it kg") }
+                if (d.note.isNotBlank()) parts.add("note: ${d.note}")
+                if (parts.isNotEmpty()) {
+                    sb.appendLine("- ${formatReportDate(d.date)}: ${parts.joinToString(" · ")}")
+                }
+            }
+        }
+        return sb.toString()
+    }
+
+    fun moodName(moodId: String?): String =
+        moodId?.let { CycleViewModel.moodOptions.firstOrNull { m -> m.id == it }?.name } ?: "—"
+
+    private fun formatReportDate(millis: Long): String =
+        java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault()).format(java.util.Date(millis))
+
     fun setCycleLength(days: Int) {
         viewModelScope.launch {
             try {
@@ -270,7 +379,26 @@ class CycleViewModel @Inject constructor(
 
     private fun startOfToday(): Long = startOfDay(System.currentTimeMillis())
 
-    private companion object {
+    companion object {
         const val DAY_MILLIS = 86_400_000L
+
+        val moodOptions = listOf(
+            MoodOption("happy", "Happy", "😊"),
+            MoodOption("energetic", "Energetic", "⚡"),
+            MoodOption("calm", "Calm", "😌"),
+            MoodOption("tired", "Tired", "😴"),
+            MoodOption("irritable", "Irritable", "😤"),
+            MoodOption("anxious", "Anxious", "😰"),
+            MoodOption("sad", "Sad", "😢"),
+            MoodOption("crampy", "Crampy", "🥴"),
+            MoodOption("bloated", "Bloated", "🎈"),
+            MoodOption("stressed", "Stressed", "😫")
+        )
     }
 }
+
+data class MoodOption(
+    val id: String,
+    val name: String,
+    val emoji: String
+)

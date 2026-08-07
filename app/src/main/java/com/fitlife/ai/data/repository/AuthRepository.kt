@@ -93,6 +93,7 @@ class AuthRepository @Inject constructor(
                     cycleLength = profile.cycleLength ?: local.cycleLength,
                     lastPeriodStart = profile.lastPeriodStart ?: local.lastPeriodStart,
                     supportMode = profile.supportMode ?: local.supportMode,
+                    birthControl = profile.birthControl ?: local.birthControl,
                     hydrationTargetMl = profile.hydrationTargetMl ?: local.hydrationTargetMl,
                     dietType = profile.dietType ?: local.dietType,
                     mealCount = profile.mealCount ?: local.mealCount,

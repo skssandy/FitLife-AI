@@ -1,5 +1,11 @@
 package com.fitlife.ai.ui.screens.cycle
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +43,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -51,17 +58,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.fitlife.ai.data.local.entity.CycleDayEntity
 import com.fitlife.ai.util.CycleCalculator
 import com.fitlife.ai.util.CyclePhase
 import com.fitlife.ai.util.SupportMode
 import com.fitlife.ai.util.SymptomCatalog
 import com.fitlife.ai.viewmodel.CycleViewModel
+import com.fitlife.ai.viewmodel.MoodOption
 import com.fitlife.ai.viewmodel.PhaseSnapshot
+import com.fitlife.ai.worker.CycleReminderScheduler
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -76,10 +88,23 @@ fun CycleScreen(
     val user = uiState.user
     val mode = viewModel.supportMode()
     val phaseInfo = viewModel.phaseInfo()
+    val context = LocalContext.current
+    val onBirthControl = viewModel.isOnBirthControl()
 
     var logOffsetDays by rememberSaveable { mutableStateOf(0) }
     var notes by rememberSaveable { mutableStateOf("") }
     var logSymptoms by rememberSaveable { mutableStateOf(listOf<String>()) }
+
+    val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+    var cycleRemindersEnabled by remember { mutableStateOf(prefs.getBoolean(KEY_CYCLE_REMINDERS, false)) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            setCycleReminders(context, true)
+            cycleRemindersEnabled = true
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -128,18 +153,21 @@ fun CycleScreen(
                     cycleLength = snapshot.cycleLength,
                     periodLength = snapshot.periodLengthDays,
                     entries = uiState.entries,
-                    phaseInfo = snapshot
+                    phaseInfo = snapshot,
+                    suppressFertile = onBirthControl
                 )
                 Spacer(Modifier.height(16.dp))
                 PhaseCard(snapshot = snapshot)
                 Spacer(Modifier.height(16.dp))
-                if (mode != SupportMode.PCOS) {
+                if (!onBirthControl && mode != SupportMode.PCOS) {
                     FertilityCard(snapshot = snapshot, todayMillis = System.currentTimeMillis())
                     Spacer(Modifier.height(16.dp))
                 }
                 GuidanceCard(title = "Training", body = if (mode == SupportMode.STANDARD) snapshot.phase.training else mode.training)
                 Spacer(Modifier.height(16.dp))
                 GuidanceCard(title = "Nutrition", body = if (mode == SupportMode.STANDARD) snapshot.phase.nutrition else mode.nutrition)
+                Spacer(Modifier.height(16.dp))
+                PhasePicksCard(phase = snapshot.phase)
                 if (mode == SupportMode.STANDARD) {
                     Spacer(Modifier.height(16.dp))
                     NutritionAdjustmentCard(snapshot = snapshot, calorieTarget = user.calorieTarget)
@@ -174,8 +202,35 @@ fun CycleScreen(
         CycleDetailsCard(
             lastPeriodStart = user.lastPeriodStart,
             cycleLength = user.cycleLength ?: 28,
+            birthControl = user.birthControl,
             onLastPeriodStartChange = { viewModel.setLastPeriodStart(it) },
-            onCycleLengthChange = { viewModel.setCycleLength(it) }
+            onCycleLengthChange = { viewModel.setCycleLength(it) },
+            onBirthControlChange = { viewModel.setBirthControl(it) },
+            onShareReport = {
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/plain"
+                    putExtra(Intent.EXTRA_SUBJECT, "FitLife AI Cycle Report")
+                    putExtra(Intent.EXTRA_TEXT, viewModel.buildCycleReport())
+                }
+                context.startActivity(Intent.createChooser(intent, "Share cycle report"))
+            },
+            cycleRemindersEnabled = cycleRemindersEnabled,
+            onCycleRemindersChange = { enabled ->
+                if (enabled) {
+                    if (android.os.Build.VERSION.SDK_INT >= 33 &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED
+                    ) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        setCycleReminders(context, true)
+                        cycleRemindersEnabled = true
+                    }
+                } else {
+                    setCycleReminders(context, false)
+                    cycleRemindersEnabled = false
+                }
+            }
         )
         Spacer(Modifier.height(16.dp))
 
@@ -204,6 +259,16 @@ fun CycleScreen(
         SymptomTrackerCard(
             selected = uiState.todaySymptoms,
             onToggle = { viewModel.toggleSymptom(it) }
+        )
+        Spacer(Modifier.height(16.dp))
+
+        DailyJournalCard(
+            journal = viewModel.todayJournal(),
+            saving = uiState.saving,
+            moodOptions = CycleViewModel.moodOptions,
+            onSave = { note, moodId, weightKg ->
+                viewModel.saveJournal(note, moodId, weightKg)
+            }
         )
         Spacer(Modifier.height(16.dp))
 
@@ -329,6 +394,100 @@ private fun NutritionAdjustmentCard(snapshot: PhaseSnapshot, calorieTarget: Int?
 }
 
 @Composable
+private fun PhasePicksCard(phase: CyclePhase) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("${phase.displayName} phase picks", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Suggested moves and foods for the current phase.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            Text("Workouts", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(4.dp))
+            CycleCalculator.phaseWorkoutPicks(phase).forEach {
+                Text("• $it", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(2.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Foods", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(4.dp))
+            CycleCalculator.phaseFoodPicks(phase).forEach {
+                Text("• $it", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(2.dp))
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DailyJournalCard(
+    journal: CycleDayEntity?,
+    saving: Boolean,
+    moodOptions: List<MoodOption>,
+    onSave: (note: String, moodId: String?, weightKg: Double?) -> Unit
+) {
+    var note by rememberSaveable { mutableStateOf(journal?.note ?: "") }
+    var moodId by rememberSaveable { mutableStateOf(journal?.moodId) }
+    var weightText by rememberSaveable { mutableStateOf(journal?.weightKg?.toString() ?: "") }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Daily journal", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(4.dp))
+            Text("Record your mood, weight, and a note for today.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Text("Mood", style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(4.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                moodOptions.forEach { option ->
+                    FilterChip(
+                        selected = option.id == moodId,
+                        onClick = {
+                            moodId = if (option.id == moodId) null else option.id
+                        },
+                        label = { Text("${option.emoji} ${option.name}") }
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = weightText,
+                onValueChange = { input ->
+                    val clean = input.filter { it.isDigit() || it == '.' }.take(5)
+                    weightText = clean
+                },
+                label = { Text("Weight (kg) — optional") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = note,
+                onValueChange = { note = it },
+                label = { Text("Note (optional)") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = {
+                    onSave(note.trim(), moodId, weightText.toDoubleOrNull())
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !saving
+            ) {
+                Text(if (saving) "Saving…" else "Save journal")
+            }
+        }
+    }
+}
+
+@Composable
 private fun CycleLengthSelector(selected: Int, onSelect: (Int) -> Unit) {
     val presets = listOf(21, 24, 28, 30, 35)
     var customText by remember(selected) { mutableStateOf(if (selected in presets) "" else selected.toString()) }
@@ -409,7 +568,8 @@ private fun CycleCalendar(
     cycleLength: Int,
     periodLength: Int,
     entries: List<com.fitlife.ai.data.local.entity.CycleEntryEntity>,
-    phaseInfo: PhaseSnapshot
+    phaseInfo: PhaseSnapshot,
+    suppressFertile: Boolean = false
 ) {
     var monthOffset by rememberSaveable { mutableStateOf(0) }
 
@@ -488,7 +648,8 @@ private fun CycleCalendar(
                             isToday = millis != null && millis == todayStart,
                             isConfirmedPeriod = isConfirmed,
                             isExpectedPeriod = isExpected,
-                            isFertile = millis != null && fertileStart != null && fertileEnd != null && millis in fertileStart..fertileEnd,
+                            isFertile = !suppressFertile && millis != null && fertileStart != null &&
+                                fertileEnd != null && millis in fertileStart..fertileEnd,
                             phase = if (inMonth && millis != null && lastPeriodStart != null && lastPeriodStart > 0)
                                 CycleCalculator.phaseForDay(
                                     CycleCalculator.cycleDay(millis, lastPeriodStart, cycleLength)
@@ -507,7 +668,9 @@ private fun CycleCalendar(
             ) {
                 LegendDot(MaterialTheme.colorScheme.error) { "Logged" }
                 LegendDot(MaterialTheme.colorScheme.error.copy(alpha = 0.35f)) { "Predicted" }
-                LegendDot(MaterialTheme.colorScheme.tertiary) { "Fertile" }
+                if (!suppressFertile) {
+                    LegendDot(MaterialTheme.colorScheme.tertiary) { "Fertile" }
+                }
                 LegendDot(MaterialTheme.colorScheme.primaryContainer) { "Phase tint" }
             }
         }
@@ -567,13 +730,18 @@ private fun LegendDot(color: Color, label: () -> String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun CycleDetailsCard(
     lastPeriodStart: Long?,
     cycleLength: Int,
+    birthControl: String?,
     onLastPeriodStartChange: (Long) -> Unit,
-    onCycleLengthChange: (Int) -> Unit
+    onCycleLengthChange: (Int) -> Unit,
+    onBirthControlChange: (String?) -> Unit,
+    onShareReport: () -> Unit,
+    cycleRemindersEnabled: Boolean,
+    onCycleRemindersChange: (Boolean) -> Unit
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -601,6 +769,61 @@ private fun CycleDetailsCard(
             Text("Cycle length", style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(4.dp))
             CycleLengthSelector(selected = cycleLength, onSelect = onCycleLengthChange)
+
+            Spacer(Modifier.height(12.dp))
+            Text("Birth control", style = MaterialTheme.typography.labelLarge)
+            Text(
+                "Ovulation and fertile-window predictions are hidden while a method is selected.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf<Pair<String?, String>>(
+                    null to "None",
+                    "pill" to "Pill",
+                    "iud" to "IUD",
+                    "implant" to "Implant",
+                    "shot" to "Shot",
+                    "patch" to "Patch",
+                    "ring" to "Ring"
+                ).forEach { (method, label) ->
+                    FilterChip(
+                        selected = (birthControl?.isNotBlank() == true) == (method != null) &&
+                            birthControl.orEmpty() == (method ?: ""),
+                        onClick = { onBirthControlChange(method) },
+                        label = { Text(label) }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Period & ovulation reminders", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        "Daily 8 AM notification near your predicted period and fertile window",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = cycleRemindersEnabled,
+                    onCheckedChange = onCycleRemindersChange
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = onShareReport,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Export cycle report")
+            }
         }
     }
 
@@ -804,6 +1027,21 @@ private fun dayOffsetMillis(daysAgo: Int): Long {
     cal.set(Calendar.SECOND, 0)
     cal.set(Calendar.MILLISECOND, 0)
     return cal.timeInMillis
+}
+
+private const val PREFS = "fitlife_prefs"
+private const val KEY_CYCLE_REMINDERS = "cycle_reminders_enabled"
+
+private fun setCycleReminders(context: Context, enabled: Boolean) {
+    if (enabled) {
+        CycleReminderScheduler.schedule(context)
+    } else {
+        CycleReminderScheduler.cancel(context)
+    }
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        .edit()
+        .putBoolean(KEY_CYCLE_REMINDERS, enabled)
+        .apply()
 }
 
 private fun decodeSymptomsCount(json: String): Int {

@@ -196,6 +196,73 @@ object CycleCalculator {
         return todayMillis in start..end
     }
 
+    fun phaseWorkoutPicks(phase: CyclePhase): List<String> = when (phase) {
+        CyclePhase.MENSTRUAL -> listOf(
+            "Brisk walking (30 min)",
+            "Restorative yoga",
+            "Mobility / stretching flow",
+            "Light swimming"
+        )
+        CyclePhase.FOLLICULAR -> listOf(
+            "Strength training (upper + lower)",
+            "Sprint intervals / HIIT",
+            "Pushing new PRs",
+            "Endurance runs"
+        )
+        CyclePhase.OVULATORY -> listOf(
+            "Heavy compound lifts",
+            "Power / plyometrics",
+            "Speed intervals",
+            "Long runs or cycling"
+        )
+        CyclePhase.LUTEAL -> listOf(
+            "Moderate resistance training",
+            "Pilates / barre",
+            "Steady-state cardio",
+            "Deload + recovery sessions"
+        )
+    }
+
+    fun phaseFoodPicks(phase: CyclePhase): List<String> = when (phase) {
+        CyclePhase.MENSTRUAL -> listOf(
+            "Spinach & lentils (iron)",
+            "Dark chocolate (magnesium)",
+            "Warm soups & cooked meals",
+            "Water + electrolytes"
+        )
+        CyclePhase.FOLLICULAR -> listOf(
+            "Lean proteins (chicken, tofu, dal)",
+            "Whole grains (oats, quinoa)",
+            "Fermented foods (curd, idli)",
+            "Colorful vegetables"
+        )
+        CyclePhase.OVULATORY -> listOf(
+            "Balanced macros at meals",
+            "Eggs + oats for breakfast",
+            "Leafy greens",
+            "Omega-3 fish (salmon, mackerel)"
+        )
+        CyclePhase.LUTEAL -> listOf(
+            "Complex carbs (sweet potato, brown rice)",
+            "Bananas (potassium)",
+            "Nuts & seeds (almonds, flax)",
+            "Magnesium-rich foods (cocoa, spinach)"
+        )
+    }
+
+    /** Returns a 1..periodLength bleeding day when [dateMillis] is inside the CURRENT expected window. */
+    fun inCurrentExpectedWindow(
+        dateMillis: Long,
+        lastPeriodStartMillis: Long,
+        cycleLengthDays: Int,
+        periodLengthDays: Int
+    ): Int {
+        val expectedStart = currentExpectedStart(dateMillis, lastPeriodStartMillis, cycleLengthDays)
+        val periodLength = periodLengthDays.coerceIn(1, 14)
+        val dayIndex = ((dateMillis - expectedStart) / DAY_MILLIS).toInt()
+        return if (dayIndex in 0 until periodLength) dayIndex + 1 else 0
+    }
+
     private fun addDays(millis: Long, days: Int): Long {
         val cal = Calendar.getInstance()
         cal.timeInMillis = millis

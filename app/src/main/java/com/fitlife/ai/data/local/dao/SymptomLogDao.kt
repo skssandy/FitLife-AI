@@ -11,6 +11,9 @@ interface SymptomLogDao {
     @Query("SELECT * FROM symptom_logs WHERE userId = :userId ORDER BY date DESC")
     fun getLogs(userId: String): Flow<List<SymptomLogEntity>>
 
+    @Query("SELECT * FROM symptom_logs WHERE userId = :userId ORDER BY date DESC")
+    suspend fun getLogsOnce(userId: String): List<SymptomLogEntity>
+
     @Query("SELECT * FROM symptom_logs WHERE userId = :userId AND date = :date LIMIT 1")
     suspend fun getForDay(userId: String, date: Long): SymptomLogEntity?
 
